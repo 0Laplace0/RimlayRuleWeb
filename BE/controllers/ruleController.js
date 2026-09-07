@@ -29,7 +29,7 @@ exports.getAllRules = async (req, res) => {
           rulesMap[row.main_id].subGroups[row.sub_id] = {
             id: row.sub_id,
             sub_title: row.sub_title,
-            rules: [] // ปรับให้ตรงกับ Frontend ที่เรียกใช้ .rules หรือ .items
+            rules: [] 
           };
         }
         if (row.item_id) {
@@ -49,6 +49,7 @@ exports.getAllRules = async (req, res) => {
 
     res.json(result);
   } catch (error) {
+    console.error("=== ERROR IN getAllRules ===", error);
     res.status(500).json({ message: 'Error fetching rules', error: error.message });
   }
 };
@@ -57,10 +58,13 @@ exports.getAllRules = async (req, res) => {
 exports.createFullRule = async (req, res) => {
   const connection = await db.getConnection();
   try {
+    console.log("=== CREATE FULL RULE BODY ===", JSON.stringify(req.body, null, 2));
+
     await connection.beginTransaction();
 
     const { title, icon, subGroups } = req.body;
     if (!title) {
+      connection.release();
       return res.status(400).json({ message: 'กรุณากรอกชื่อหัวข้อหลัก' });
     }
 
@@ -73,9 +77,11 @@ exports.createFullRule = async (req, res) => {
     if (subGroups && Array.isArray(subGroups)) {
       for (let i = 0; i < subGroups.length; i++) {
         const sub = subGroups[i];
+        const subTitleText = sub.sub_title || sub.title || '';
+
         const [subResult] = await connection.query(
           'INSERT INTO rule_sub_groups (rules_main_id, sub_title, sort_order) VALUES (?, ?, ?)',
-          [mainId, sub.sub_title || sub.title, i]
+          [mainId, subTitleText, i]
         );
         const subGroupId = subResult.insertId;
 
@@ -83,9 +89,12 @@ exports.createFullRule = async (req, res) => {
         if (items && Array.isArray(items)) {
           for (let j = 0; j < items.length; j++) {
             const item = items[j];
+            const symbolText = item.symbol ? String(item.symbol).trim() : 'check';
+            const itemText = item.text || '';
+
             await connection.query(
               'INSERT INTO rule_items (sub_group_id, symbol, text, sort_order) VALUES (?, ?, ?, ?)',
-              [subGroupId, item.symbol || 'check', item.text, j]
+              [subGroupId, symbolText, itemText, j]
             );
           }
         }
@@ -98,7 +107,8 @@ exports.createFullRule = async (req, res) => {
   } catch (error) {
     await connection.rollback();
     connection.release();
-    res.status(500).json({ error: error.message });
+    console.error("=== ERROR IN createFullRule ===", error);
+    res.status(500).json({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', error: error.message });
   }
 };
 
@@ -107,10 +117,13 @@ exports.updateFullRule = async (req, res) => {
   const { id } = req.params;
   const connection = await db.getConnection();
   try {
+    console.log(`=== UPDATE FULL RULE ID ${id} BODY ===`, JSON.stringify(req.body, null, 2));
+
     await connection.beginTransaction();
 
     const { title, icon, subGroups } = req.body;
     if (!title) {
+      connection.release();
       return res.status(400).json({ message: 'กรุณากรอกชื่อหัวข้อหลัก' });
     }
 
@@ -125,9 +138,11 @@ exports.updateFullRule = async (req, res) => {
     if (subGroups && Array.isArray(subGroups)) {
       for (let i = 0; i < subGroups.length; i++) {
         const sub = subGroups[i];
+        const subTitleText = sub.sub_title || sub.title || '';
+
         const [subResult] = await connection.query(
           'INSERT INTO rule_sub_groups (rules_main_id, sub_title, sort_order) VALUES (?, ?, ?)',
-          [id, sub.sub_title || sub.title, i]
+          [id, subTitleText, i]
         );
         const subGroupId = subResult.insertId;
 
@@ -135,9 +150,12 @@ exports.updateFullRule = async (req, res) => {
         if (items && Array.isArray(items)) {
           for (let j = 0; j < items.length; j++) {
             const item = items[j];
+            const symbolText = item.symbol ? String(item.symbol).trim() : 'check';
+            const itemText = item.text || '';
+
             await connection.query(
               'INSERT INTO rule_items (sub_group_id, symbol, text, sort_order) VALUES (?, ?, ?, ?)',
-              [subGroupId, item.symbol || 'check', item.text, j]
+              [subGroupId, symbolText, itemText, j]
             );
           }
         }
@@ -150,7 +168,8 @@ exports.updateFullRule = async (req, res) => {
   } catch (error) {
     await connection.rollback();
     connection.release();
-    res.status(500).json({ error: error.message });
+    console.error("=== ERROR IN updateFullRule ===", error);
+    res.status(500).json({ message: 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล', error: error.message });
   }
 };
 
@@ -161,6 +180,7 @@ exports.createMainRule = async (req, res) => {
     const [result] = await db.query('INSERT INTO rules_main (title, icon) VALUES (?, ?)', [title, icon]);
     res.status(201).json({ id: result.insertId, title, icon });
   } catch (error) {
+    console.error("=== ERROR IN createMainRule ===", error);
     res.status(500).json({ message: 'Error adding main rule', error: error.message });
   }
 };
@@ -172,6 +192,7 @@ exports.deleteMainRule = async (req, res) => {
     await db.query('DELETE FROM rules_main WHERE id = ?', [id]);
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
+    console.error("=== ERROR IN deleteMainRule ===", error);
     res.status(500).json({ message: 'Error deleting rule', error: error.message });
   }
 };

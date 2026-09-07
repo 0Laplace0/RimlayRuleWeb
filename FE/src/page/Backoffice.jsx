@@ -2,14 +2,14 @@ import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { swalUtils } from '@/utils/swalUtils.js';
 
-import RulesCRUD from '@/components/backoffice/RulesCRUD';
+import ActivityRulesCRUD from '@/components/backoffice/ActivityRulesCRUD';
 import ActivityLog from '@/components/backoffice/ActivityLog';
 
 const Backoffice = () => {
-  const [activeMenu, setActiveMenu] = useState('Dashboard');
+  const [activeMenu, setActiveMenu] = useState('ActivityRules');
 
   const sidebarMenus = [
-    { id: 'RulesCRUD', name: '- RulesCRUD -' },
+    { id: 'ActivityRules', name: '- จัดการกฎกิจกรรม -' },
     { id: 'ActivityLog', name: '- Realtime Activity Log -' },
   ];
 
@@ -33,8 +33,8 @@ const Backoffice = () => {
 
   const renderContent = () => {
     switch (activeMenu) {
-      case 'RulesCRUD':
-        return <RulesCRUD />;
+      case 'ActivityRules':
+        return <ActivityRulesCRUD />;
       case 'ActivityLog':
         return <ActivityLog />;
       default:
@@ -64,7 +64,7 @@ const Backoffice = () => {
                 <button
                   key={menu.id}
                   onClick={() => setActiveMenu(menu.id)}
-                  className={`w-full py-3 px-4 text-xs font-semibold text-center border-b border-purple-950/20 transition-all duration-300 ${
+                  className={`w-full py-3 px-4 text-xs font-semibold text-center border-b border-purple-950/20 transition-all duration-300 cursor-pointer ${
                     activeMenu === menu.id
                       ? 'bg-purple-600/10 text-purple-400 border-r-4 border-r-purple-500'
                       : 'text-gray-400 hover:bg-[#121217] hover:text-purple-300'
@@ -77,7 +77,7 @@ const Backoffice = () => {
               {/* ปุ่มออกจากระบบเรียกใช้งาน handleLogout */}
               <button
                 onClick={handleLogout}
-                className="w-full py-3 px-4 text-xs font-semibold text-center text-rose-400 bg-rose-950/10 hover:bg-rose-950/20 transition-all duration-300"
+                className="w-full py-3 px-4 text-xs font-semibold text-center text-rose-400 bg-rose-950/10 hover:bg-rose-950/20 transition-all duration-300 cursor-pointer"
               >
                 - ออกจากระบบ -
               </button>
