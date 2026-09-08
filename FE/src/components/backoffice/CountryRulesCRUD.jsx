@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { swalUtils } from '../../utils/swalUtils.js';
 
-const ActivityRulesCRUD = () => {
+const CountryRulesCRUD = () => {
   const [rulesList, setRulesList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState('table');
@@ -11,7 +11,7 @@ const ActivityRulesCRUD = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const API_URL = 'http://localhost:5000/api/activity-rules';
+  const API_URL = 'http://localhost:5000/api/country-rules';
   const token = localStorage.getItem('token');
 
   // --- API Fetching ---
@@ -21,7 +21,7 @@ const ActivityRulesCRUD = () => {
       const res = await axios.get(API_URL); 
       setRulesList(res.data);
     } catch (err) {
-      swalUtils.error('เกิดข้อผิดพลาด!', 'ไม่สามารถดึงข้อมูลกิจกรรมได้');
+      swalUtils.error('เกิดข้อผิดพลาด!', 'ไม่สามารถดึงข้อมูลกฎระเบียบได้');
     } finally {
       setLoading(false);
     }
@@ -106,18 +106,16 @@ const ActivityRulesCRUD = () => {
       subGroups: form.subGroups.map(sg => {
         if (sg.subId === subId || sg.id === subId) {
           const rules = sg.rules || sg.items || [];
-          const newRule = { 
-            ruleId: `temp_${Date.now()}`, 
-            text: '', 
-            penaltyType: 'บทลงโทษ',   
-            penalty_type: 'บทลงโทษ', 
-            penaltyValue: '',
-            penalty_value: ''
-          };
           return {
             ...sg,
-            rules: [...rules, newRule],
-            items: [...rules, newRule]
+            rules: [...rules, { 
+              ruleId: `temp_${Date.now()}`, 
+              text: '', 
+              penaltyType: 'บทลงโทษ',   
+              penalty_type: 'บทลงโทษ', 
+              penaltyValue: '',
+              penalty_value: ''
+            }]
           };
         }
         return sg;
@@ -132,7 +130,7 @@ const ActivityRulesCRUD = () => {
         if (sg.subId === subId || sg.id === subId) {
           const rulesList = sg.rules || sg.items || [];
           const updated = rulesList.filter(r => r.ruleId !== ruleId && r.id !== ruleId);
-          return { ...sg, rules: updated, items: updated };
+          return { ...sg, rules: updated };
         }
         return sg;
       })
@@ -158,7 +156,7 @@ const ActivityRulesCRUD = () => {
             }
             return r;
           });
-          return { ...sg, rules: updated, items: updated };
+          return { ...sg, rules: updated };
         }
         return sg;
       })
@@ -189,12 +187,12 @@ const ActivityRulesCRUD = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const actionTitle = view === 'add' ? 'ตรวจสอบการเพิ่มข้อมูลกิจกรรม' : 'ตรวจสอบการแก้ไขข้อมูลกิจกรรม';
+    const actionTitle = view === 'add' ? 'ตรวจสอบการเพิ่มข้อมูล' : 'ตรวจสอบการแก้ไขข้อมูล';
 
     const isConfirmed = await swalUtils.previewConfirm({
       actionTitle,
       fields: [
-        { label: 'ชื่อหัวข้อ', value: form.title },
+        { label: 'ชื่อหัวข้อหลัก', value: form.title },
         { label: 'จำนวนกลุ่มย่อย', value: `${form.subGroups.length} กลุ่ม` }
       ],
       confirmText: view === 'add' ? 'ยืนยันการเพิ่ม' : 'ยืนยันอัปเดต',
@@ -204,6 +202,7 @@ const ActivityRulesCRUD = () => {
     if (!isConfirmed) return;
 
     try {
+      // จัดรูปทรง Payload ให้สะอาดและตรงกับที่ Backend คาดหวัง
       const formattedSubGroups = form.subGroups.map(sg => ({
         subTitle: sg.subTitle || sg.sub_title || '',
         rules: (sg.rules || sg.items || []).map(r => ({
@@ -216,7 +215,6 @@ const ActivityRulesCRUD = () => {
       const payload = {
         title: form.title,
         footerNote: form.footerNote,
-        footer_note: form.footerNote,
         subGroups: formattedSubGroups
       };
 
@@ -224,16 +222,17 @@ const ActivityRulesCRUD = () => {
 
       if (view === 'add') {
         await axios.post(`${API_URL}/create`, payload, config);
-        swalUtils.success('เพิ่มข้อมูลกิจกรรมสำเร็จแล้ว!');
+        swalUtils.success('เพิ่มข้อมูลสำเร็จแล้ว!');
       } else {
         await axios.put(`${API_URL}/update/${form.id}`, payload, config);
-        swalUtils.success('อัปเดตข้อมูลกิจกรรมสำเร็จแล้ว!');
+        swalUtils.success('อัปเดตข้อมูลสำเร็จแล้ว!');
       }
 
       fetchRules();
       setView('table');
     } catch (err) {
-      swalUtils.error('เกิดข้อผิดพลาด!', err.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้');
+      console.error("Submit Error:", err.response?.data);
+      swalUtils.error('เกิดข้อผิดพลาด!', err.response?.data?.error || err.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้');
     }
   };
 
@@ -247,7 +246,7 @@ const ActivityRulesCRUD = () => {
       {view === 'table' ? (
         <div>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <h2 className="text-2xl font-bold text-purple-300">จัดการข้อมูล: กิจกรรม</h2>
+            <h2 className="text-2xl font-bold text-purple-300">จัดการข้อมูล: กฎระเบียบประเทศ</h2>
             
             <div className="flex items-center gap-3 w-full md:w-auto">
               <input
@@ -257,14 +256,14 @@ const ActivityRulesCRUD = () => {
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full md:w-64 px-5 py-2 rounded-full bg-[#121216] border border-purple-950/80 focus:outline-none focus:border-purple-500 text-sm text-white shadow-inner"
+                className="w-full md:w-64 px-5 py-2 rounded-full bg-[#121216] border border-purple-950/85 focus:outline-none focus:border-purple-500 text-sm text-white shadow-inner"
                 placeholder="ค้นหาหัวข้อ..."
               />
               <button
                 onClick={handleOpenAdd}
                 className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-full text-sm font-bold transition shrink-0 shadow-lg shadow-blue-600/20 text-white cursor-pointer"
               >
-                + เพิ่มหัวข้อกิจกรรม
+                + เพิ่มหัวข้อใหม่
               </button>
             </div>
           </div>
@@ -310,7 +309,7 @@ const ActivityRulesCRUD = () => {
         <div className="space-y-6">
           <div className="bg-[#181125] border border-purple-950/60 py-4 px-6 rounded-lg text-center shadow-lg">
             <h1 className="text-lg font-bold text-purple-300 tracking-wide">
-              :: {view === 'add' ? 'เพิ่มข้อมูลกิจกรรม' : 'แก้ไขข้อมูลกิจกรรม'} ::
+              :: {view === 'add' ? 'เพิ่มข้อมูลกฎระเบียบประเทศ' : 'แก้ไขข้อมูลกฎระเบียบประเทศ'} ::
             </h1>
           </div>
 
@@ -443,4 +442,4 @@ const ActivityRulesCRUD = () => {
   );
 };
 
-export default ActivityRulesCRUD;
+export default CountryRulesCRUD;

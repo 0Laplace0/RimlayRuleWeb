@@ -3,12 +3,14 @@ import Navbar from '@/components/Navbar';
 import { swalUtils } from '@/utils/swalUtils.js';
 
 import ActivityRulesCRUD from '@/components/backoffice/ActivityRulesCRUD';
+import CountryRulesCRUD from '@/components/backoffice/CountryRulesCRUD';
 import ActivityLog from '@/components/backoffice/ActivityLog';
 
 const Backoffice = () => {
   const [activeMenu, setActiveMenu] = useState('ActivityRules');
 
   const sidebarMenus = [
+    { id: 'CountryRules', name: '- จัดการกฎประเทศ -' },
     { id: 'ActivityRules', name: '- จัดการกฎกิจกรรม -' },
     { id: 'ActivityLog', name: '- Realtime Activity Log -' },
   ];
@@ -22,7 +24,9 @@ const Backoffice = () => {
       const isConfirmed = typeof result === 'object' ? result.isConfirmed : result;
 
       if (isConfirmed === true) {
+        localStorage.removeItem('token'); // เพิ่มการลบ Token
         swalUtils.success('ออกจากระบบแล้ว!', 'คุณได้ออกจากระบบเรียบร้อยแล้ว');
+        // window.location.href = '/login'; // หรือใช้ useNavigate ของ react-router-dom
       } else {
         return;
       }
@@ -34,7 +38,7 @@ const Backoffice = () => {
   const renderContent = () => {
     switch (activeMenu) {
       case 'CountryRules':
-        return <CountryRules />;
+        return <CountryRulesCRUD />;
       case 'ActivityRules':
         return <ActivityRulesCRUD />;
       case 'ActivityLog':

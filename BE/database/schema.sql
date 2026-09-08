@@ -13,17 +13,20 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Rules Schema
 
--- 1. ตารางหมวดหมู่หลัก (เช่น กฎประเทศ, กฎหน่วยงาน, กิจกรรม, Terms & Conditions)
+-- 1. ตารางหมวดหมู่หลัก (ปรับปรุงให้รองรับ category และแก้ unique key)
 CREATE TABLE IF NOT EXISTS rule_categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL COMMENT 'ชื่อหมวดหมู่หลัก',
-    slug VARCHAR(255) UNIQUE NOT NULL COMMENT 'URL slug สำหรับอ้างอิง',
+    category VARCHAR(50) NOT NULL DEFAULT 'activity' COMMENT 'ประเภทหมวดหมู่ เช่น activity, country, safezone',
+    name VARCHAR(255) NOT NULL COMMENT 'ชื่อหัวข้อหลัก',
+    slug VARCHAR(255) NOT NULL COMMENT 'URL slug สำหรับอ้างอิง',
     sort_order INT DEFAULT 0 COMMENT 'ลำดับการแสดงผล',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    -- เปลี่ยนจาก UNIQUE(slug) เดี่ยวๆ เป็น Unique ร่วมกันระหว่าง category กับ slug
+    CONSTRAINT unique_category_slug UNIQUE (category, slug)
 );
 
--- 2. ตารางหมวดหมู่ย่อย (สำหรับหมวดที่มีข้อย่อย เช่น กฎประเทศ -> กิจกรรม -> กฎการเล่นงานดำ)
+-- 2. ตารางหมวดหมู่ย่อย (สำหรับหมวดที่มีข้อย่อย)
 CREATE TABLE IF NOT EXISTS rule_subcategories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     category_id INT NOT NULL COMMENT 'เชื่อมไปหมวดหมู่หลัก (FK)',
