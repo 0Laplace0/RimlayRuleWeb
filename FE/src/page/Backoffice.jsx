@@ -33,6 +33,8 @@ const Backoffice = () => {
 
   const renderContent = () => {
     switch (activeMenu) {
+      case 'CountryRules':
+        return <CountryRules />;
       case 'ActivityRules':
         return <ActivityRulesCRUD />;
       case 'ActivityLog':

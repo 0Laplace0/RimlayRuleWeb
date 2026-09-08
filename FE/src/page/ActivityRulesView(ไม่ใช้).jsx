@@ -6,7 +6,6 @@ const ActivityRulesView = () => {
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ใช้ API URL เดียวกับฝั่ง Admin (CRUD)
   const API_URL = 'http://localhost:5000/api/rules';
 
   useEffect(() => {
@@ -24,7 +23,6 @@ const ActivityRulesView = () => {
     fetchRules();
   }, []);
 
-  // --- กรณีที่ผู้ใช้คลิกเลือกหัวข้อแล้ว ให้แสดงหน้าตารางรายละเอียด ---
   if (selectedTopic) {
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-6 text-white animate-fadeIn">

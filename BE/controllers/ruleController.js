@@ -1,198 +1,313 @@
 const db = require('../config/db');
 
-// 1. ดึงข้อมูลกฎทั้งหมด (Nested Structure)
-exports.getAllRules = async (req, res) => {
+// [READ] ดึงข้อมูลกฎตามประเภท (ผ่าน slug ของหมวดหมู่ เช่น /api/rules/activity)
+exports.getRulesByType = async (req, res) => {
+  const { categoryType } = req.params; 
   try {
-    const [rows] = await db.query(`
-      SELECT 
-        m.id AS main_id, m.title AS main_title, m.icon,
-        s.id AS sub_id, s.sub_title,
-        i.id AS item_id, i.symbol, i.text
-      FROM rules_main m
-      LEFT JOIN rule_sub_groups s ON m.id = s.rules_main_id
-      LEFT JOIN rule_items i ON s.id = i.sub_group_id
-      ORDER BY m.id ASC, s.id ASC, i.id ASC
-    `);
+    const [categories] = await db.query(
+      'SELECT * FROM rule_categories WHERE slug = ?', 
+      [categoryType]
+    );
 
-    const rulesMap = {};
-    rows.forEach(row => {
-      if (!rulesMap[row.main_id]) {
-        rulesMap[row.main_id] = {
-          id: row.main_id,
-          title: row.main_title,
-          icon: row.icon,
-          subGroups: {}
+    if (categories.length === 0) {
+      return res.status(404).json({ message: 'ไม่พบหมวดหมู่ดังกล่าว' });
+    }
+
+    const category = categories[0];
+
+    const [subcategories] = await db.query(
+      'SELECT * FROM rule_subcategories WHERE category_id = ? ORDER BY sort_order ASC, id ASC', 
+      [category.id]
+    );
+
+    let subcategoriesData = [];
+
+    if (subcategories.length > 0) {
+      subcategoriesData = await Promise.all(subcategories.map(async (sub) => {
+        const [rules] = await db.query(
+          'SELECT * FROM rules WHERE subcategory_id = ? ORDER BY sort_order ASC, id ASC', 
+          [sub.id]
+        );
+        return {
+          id: sub.id,
+          subTitle: sub.name,
+          rules: rules.map(rule => ({
+            id: rule.id,
+            title: rule.title,
+            text: rule.rule_text,
+            penaltyValue: rule.penalty_value
+          }))
         };
-      }
-      if (row.sub_id) {
-        if (!rulesMap[row.main_id].subGroups[row.sub_id]) {
-          rulesMap[row.main_id].subGroups[row.sub_id] = {
-            id: row.sub_id,
-            sub_title: row.sub_title,
-            rules: [] 
-          };
-        }
-        if (row.item_id) {
-          rulesMap[row.main_id].subGroups[row.sub_id].rules.push({
-            id: row.item_id,
-            symbol: row.symbol,
-            text: row.text
-          });
-        }
-      }
-    });
+      }));
+    } else {
+      const [directRules] = await db.query(
+        'SELECT * FROM rules WHERE category_id = ? AND subcategory_id IS NULL ORDER BY sort_order ASC, id ASC', 
+        [category.id]
+      );
+      subcategoriesData = [{
+        id: null,
+        subTitle: null,
+        rules: directRules.map(rule => ({
+          id: rule.id,
+          title: rule.title,
+          text: rule.rule_text,
+          penaltyValue: rule.penalty_value
+        }))
+      }];
+    }
 
-    const result = Object.values(rulesMap).map(m => ({
-      ...m,
-      subGroups: Object.values(m.subGroups)
-    }));
+    const [footers] = await db.query(
+      'SELECT * FROM rule_footers WHERE category_id = ?', 
+      [category.id]
+    );
+
+    const result = {
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+      footerNote: footers.length > 0 ? footers[0].note_text : null,
+      subcategories: subcategoriesData
+    };
 
     res.json(result);
-  } catch (error) {
-    console.error("=== ERROR IN getAllRules ===", error);
-    res.status(500).json({ message: 'Error fetching rules', error: error.message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
 
-// 2. บันทึกข้อมูลกฎทั้งหมดแบบครบชุด (Full Structure Create) - รองรับ /api/rules/full
-exports.createFullRule = async (req, res) => {
-  const connection = await db.getConnection();
+// [READ ALL] ดึงข้อมูลรายการหลักทั้งหมด (สำหรับตารางหน้าจัดการ)
+exports.getAllRules = async (req, res) => {
   try {
-    console.log("=== CREATE FULL RULE BODY ===", JSON.stringify(req.body, null, 2));
+    const [categories] = await db.query('SELECT * FROM rule_categories ORDER BY id ASC');
+    
+    const fullData = await Promise.all(categories.map(async (cat) => {
+      const [subcategories] = await db.query(
+        'SELECT * FROM rule_subcategories WHERE category_id = ? ORDER BY sort_order ASC, id ASC',
+        [cat.id]
+      );
 
+      const subGroups = await Promise.all(subcategories.map(async (sub) => {
+        const [rules] = await db.query(
+          'SELECT * FROM rules WHERE subcategory_id = ? ORDER BY sort_order ASC, id ASC',
+          [sub.id]
+        );
+        return {
+          id: sub.id,
+          subTitle: sub.name,
+          rules: rules.map(r => ({
+            id: r.id,
+            text: r.rule_text,
+            penaltyValue: r.penalty_value
+          }))
+        };
+      }));
+
+      const [footers] = await db.query('SELECT * FROM rule_footers WHERE category_id = ?', [cat.id]);
+
+      return {
+        id: cat.id,
+        title: cat.name,
+        slug: cat.slug,
+        footerNote: footers.length > 0 ? footers[0].note_text : '',
+        subGroups: subGroups
+      };
+    }));
+
+    res.json(fullData);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// [CREATE FULL] เพิ่มหัวข้อ หมวดหมู่ย่อย และกฎ แบบครบชุดในครั้งเดียว
+exports.createFullRule = async (req, res) => {
+  const { title, footerNote, subGroups } = req.body;
+  let connection;
+  try {
+    connection = await db.getConnection();
     await connection.beginTransaction();
 
-    const { title, icon, subGroups } = req.body;
-    if (!title) {
-      connection.release();
-      return res.status(400).json({ message: 'กรุณากรอกชื่อหัวข้อหลัก' });
-    }
+    const slug = title ? title.toLowerCase().replace(/\s+/g, '-') : '';
 
-    const [mainResult] = await connection.query(
-      'INSERT INTO rules_main (title, icon) VALUES (?, ?)',
-      [title, icon || null]
+    const [catResult] = await connection.query(
+      'INSERT INTO rule_categories (name, slug) VALUES (?, ?)',
+      [title, slug]
     );
-    const mainId = mainResult.insertId;
+    const categoryId = catResult.insertId;
 
-    if (subGroups && Array.isArray(subGroups)) {
-      for (let i = 0; i < subGroups.length; i++) {
-        const sub = subGroups[i];
-        const subTitleText = sub.sub_title || sub.title || '';
+    if (subGroups && subGroups.length > 0) {
+      for (const [subIndex, sub] of subGroups.entries()) {
+        const subTitleName = sub.subTitle || sub.sub_title || '';
+        const subSlug = subTitleName ? subTitleName.toLowerCase().replace(/\s+/g, '-') : `sub-${Date.now()}-${subIndex}`;
 
         const [subResult] = await connection.query(
-          'INSERT INTO rule_sub_groups (rules_main_id, sub_title, sort_order) VALUES (?, ?, ?)',
-          [mainId, subTitleText, i]
+          'INSERT INTO rule_subcategories (category_id, name, slug, sort_order) VALUES (?, ?, ?, ?)',
+          [categoryId, subTitleName, subSlug, subIndex]
         );
-        const subGroupId = subResult.insertId;
+        const subcategoryId = subResult.insertId;
 
-        const items = sub.rules || sub.items;
-        if (items && Array.isArray(items)) {
-          for (let j = 0; j < items.length; j++) {
-            const item = items[j];
-            const symbolText = item.symbol ? String(item.symbol).trim() : 'check';
-            const itemText = item.text || '';
-
+        const rulesList = sub.rules || sub.items || [];
+        if (rulesList.length > 0) {
+          for (const [ruleIndex, rule] of rulesList.entries()) {
             await connection.query(
-              'INSERT INTO rule_items (sub_group_id, symbol, text, sort_order) VALUES (?, ?, ?, ?)',
-              [subGroupId, symbolText, itemText, j]
+              'INSERT INTO rules (category_id, subcategory_id, rule_text, penalty_value, sort_order) VALUES (?, ?, ?, ?, ?)',
+              [categoryId, subcategoryId, rule.text, rule.penaltyValue || rule.penalty_value || null, ruleIndex]
             );
           }
         }
       }
     }
 
+    if (footerNote) {
+      await connection.query(
+        'INSERT INTO rule_footers (category_id, note_text) VALUES (?, ?)',
+        [categoryId, footerNote]
+      );
+    }
+
     await connection.commit();
-    connection.release();
-    res.status(201).json({ message: 'บันทึกข้อมูลกฎทั้งหมดสำเร็จ', mainId });
-  } catch (error) {
-    await connection.rollback();
-    connection.release();
-    console.error("=== ERROR IN createFullRule ===", error);
-    res.status(500).json({ message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', error: error.message });
+    res.status(201).json({ message: 'เพิ่มข้อมูลสำเร็จ', id: categoryId });
+  } catch (err) {
+    if (connection) await connection.rollback();
+    console.error("CREATE ERROR DETAILED:", err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (connection) connection.release();
   }
 };
 
-// 3. อัปเดตข้อมูลกฎทั้งหมดแบบครบชุดตาม ID (Full Structure Update) - รองรับ PUT /api/rules/full/:id
+// [UPDATE FULL] อัปเดตข้อมูลแบบโครงสร้างครบชุด (แก้ไขให้ถูกต้องและสมบูรณ์)
 exports.updateFullRule = async (req, res) => {
   const { id } = req.params;
-  const connection = await db.getConnection();
+  const { title, footerNote, subGroups } = req.body;
+  let connection;
   try {
-    console.log(`=== UPDATE FULL RULE ID ${id} BODY ===`, JSON.stringify(req.body, null, 2));
-
+    connection = await db.getConnection();
     await connection.beginTransaction();
 
-    const { title, icon, subGroups } = req.body;
-    if (!title) {
-      connection.release();
-      return res.status(400).json({ message: 'กรุณากรอกชื่อหัวข้อหลัก' });
+    const slug = title ? title.toLowerCase().replace(/\s+/g, '-') : undefined;
+
+    if (title) {
+      await connection.query(
+        'UPDATE rule_categories SET name = ?, slug = ? WHERE id = ?',
+        [title, slug, id]
+      );
     }
 
-    await connection.query(
-      'UPDATE rules_main SET title = ?, icon = ? WHERE id = ?',
-      [title, icon || null, id]
-    );
+    // ลบ Subgroups และ Rules เก่าออกก่อนจัดการชุดใหม่
+    const [oldSubs] = await connection.query('SELECT id FROM rule_subcategories WHERE category_id = ?', [id]);
+    for (const sub of oldSubs) {
+      await connection.query('DELETE FROM rules WHERE subcategory_id = ?', [sub.id]);
+    }
+    await connection.query('DELETE FROM rule_subcategories WHERE category_id = ?', [id]);
 
-    // ลบของเก่าทิ้งแล้วใส่ชุดใหม่แทนที่ (ใช้ Cascade บน Sub Groups)
-    await connection.query('DELETE FROM rule_sub_groups WHERE rules_main_id = ?', [id]);
-
-    if (subGroups && Array.isArray(subGroups)) {
-      for (let i = 0; i < subGroups.length; i++) {
-        const sub = subGroups[i];
-        const subTitleText = sub.sub_title || sub.title || '';
+    // เพิ่ม Subgroups และ Rules ใหม่เข้าไป
+    if (subGroups && subGroups.length > 0) {
+      for (const [subIndex, sub] of subGroups.entries()) {
+        const subTitleName = sub.subTitle || sub.sub_title || '';
+        const subSlug = subTitleName ? subTitleName.toLowerCase().replace(/\s+/g, '-') : `sub-${Date.now()}-${subIndex}`;
 
         const [subResult] = await connection.query(
-          'INSERT INTO rule_sub_groups (rules_main_id, sub_title, sort_order) VALUES (?, ?, ?)',
-          [id, subTitleText, i]
+          'INSERT INTO rule_subcategories (category_id, name, slug, sort_order) VALUES (?, ?, ?, ?)',
+          [id, subTitleName, subSlug, subIndex]
         );
-        const subGroupId = subResult.insertId;
+        const subcategoryId = subResult.insertId;
 
-        const items = sub.rules || sub.items;
-        if (items && Array.isArray(items)) {
-          for (let j = 0; j < items.length; j++) {
-            const item = items[j];
-            const symbolText = item.symbol ? String(item.symbol).trim() : 'check';
-            const itemText = item.text || '';
-
+        const rulesList = sub.rules || sub.items || [];
+        if (rulesList.length > 0) {
+          for (const [ruleIndex, rule] of rulesList.entries()) {
             await connection.query(
-              'INSERT INTO rule_items (sub_group_id, symbol, text, sort_order) VALUES (?, ?, ?, ?)',
-              [subGroupId, symbolText, itemText, j]
+              'INSERT INTO rules (category_id, subcategory_id, rule_text, penalty_value, sort_order) VALUES (?, ?, ?, ?, ?)',
+              [id, subcategoryId, rule.text, rule.penaltyValue || rule.penalty_value || null, ruleIndex]
             );
           }
         }
       }
     }
 
+    // จัดการ Footer Note
+    await connection.query('DELETE FROM rule_footers WHERE category_id = ?', [id]);
+    if (footerNote) {
+      await connection.query(
+        'INSERT INTO rule_footers (category_id, note_text) VALUES (?, ?)',
+        [id, footerNote]
+      );
+    }
+
     await connection.commit();
-    connection.release();
-    res.json({ message: 'อัปเดตข้อมูลกฎทั้งหมดสำเร็จ', mainId: id });
-  } catch (error) {
-    await connection.rollback();
-    connection.release();
-    console.error("=== ERROR IN updateFullRule ===", error);
-    res.status(500).json({ message: 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล', error: error.message });
+    res.json({ message: 'อัปเดตข้อมูลสำเร็จ' });
+  } catch (err) {
+    if (connection) await connection.rollback();
+    console.error("UPDATE ERROR DETAILED:", err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (connection) connection.release();
   }
 };
 
-// 4. เพิ่ม Rules Main แบบเดี่ยวๆ
-exports.createMainRule = async (req, res) => {
-  const { title, icon } = req.body;
-  try {
-    const [result] = await db.query('INSERT INTO rules_main (title, icon) VALUES (?, ?)', [title, icon]);
-    res.status(201).json({ id: result.insertId, title, icon });
-  } catch (error) {
-    console.error("=== ERROR IN createMainRule ===", error);
-    res.status(500).json({ message: 'Error adding main rule', error: error.message });
-  }
-};
-
-// 5. ลบ Rules Main
+// [DELETE MAIN] ลบหัวข้อหลัก (รวมถึง Subgroups และ Rules ที่ผูกอยู่)
 exports.deleteMainRule = async (req, res) => {
   const { id } = req.params;
+  let connection;
   try {
-    await db.query('DELETE FROM rules_main WHERE id = ?', [id]);
-    res.json({ message: 'Deleted successfully' });
-  } catch (error) {
-    console.error("=== ERROR IN deleteMainRule ===", error);
-    res.status(500).json({ message: 'Error deleting rule', error: error.message });
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [subs] = await connection.query('SELECT id FROM rule_subcategories WHERE category_id = ?', [id]);
+    for (const sub of subs) {
+      await connection.query('DELETE FROM rules WHERE subcategory_id = ?', [sub.id]);
+    }
+    await connection.query('DELETE FROM rule_subcategories WHERE category_id = ?', [id]);
+    await connection.query('DELETE FROM rule_footers WHERE category_id = ?', [id]);
+    await connection.query('DELETE FROM rule_categories WHERE id = ?', [id]);
+
+    await connection.commit();
+    res.json({ message: 'ลบหัวข้อหลักสำเร็จ' });
+  } catch (err) {
+    if (connection) await connection.rollback();
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (connection) connection.release();
+  }
+};
+
+// ฟังก์ชันย่อยเดิม
+exports.createRuleItem = async (req, res) => {
+  const { category_id, subcategory_id, title, rule_text, penalty_value, sort_order } = req.body;
+  try {
+    const [result] = await db.query(
+      `INSERT INTO rules (category_id, subcategory_id, title, rule_text, penalty_value, sort_order) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [category_id, subcategory_id || null, title || null, rule_text, penalty_value || null, sort_order || 0]
+    );
+    res.status(201).json({ message: 'เพิ่มกฎสำเร็จ', id: result.insertId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateRuleItem = async (req, res) => {
+  const { id } = req.params;
+  const { title, rule_text, penalty_value, sort_order } = req.body;
+  try {
+    await db.query(
+      `UPDATE rules 
+       SET title = ?, rule_text = ?, penalty_value = ?, sort_order = ? 
+       WHERE id = ?`,
+      [title || null, rule_text, penalty_value || null, sort_order || 0, id]
+    );
+    res.json({ message: 'อัปเดตกฎสำเร็จ' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.deleteRuleItem = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query('DELETE FROM rules WHERE id = ?', [id]);
+    res.json({ message: 'ลบกฎสำเร็จ' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };

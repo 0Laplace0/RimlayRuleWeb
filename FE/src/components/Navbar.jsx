@@ -5,19 +5,26 @@ import ProfileModal from './ProfileModal';
 
 const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isRulesDropdownOpen, setIsRulesDropdownOpen] = useState(false);
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+  const [isAgencyDropdownOpen, setIsAgencyDropdownOpen] = useState(false);
   const [rulesCategories, setRulesCategories] = useState([]);
-  const dropdownRef = useRef(null);
+  
+  const countryDropdownRef = useRef(null);
+  const agencyDropdownRef = useRef(null);
   const navigate = useNavigate();
 
   // ดึงข้อมูลกฎทั้งหมดจาก Backend เพื่อนำมาแสดงเป็นหัวข้อย่อยในหมวด "กิจกรรม"
   useEffect(() => {
     const fetchRulesMenu = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/rules');
+        const response = await fetch('http://localhost:5000/api/activity-rules');
         if (response.ok) {
           const data = await response.json();
-          setRulesCategories(data);
+          // รองรับทั้งกรณีที่ Backend ส่งมาเป็น Array ตรงๆ หรืออยู่ใน Object เช่น { data: [...] }
+          const categoriesArray = Array.isArray(data) ? data : (data.categories || data.data || []);
+          setRulesCategories(categoriesArray);
+        } else {
+          console.error('API Error Status:', response.status);
         }
       } catch (err) {
         console.error('Failed to fetch rules menu:', err);
@@ -30,19 +37,23 @@ const Navbar = () => {
   // ปิด Dropdown เมื่อคลิกพื้นที่ด้านนอก
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsRulesDropdownOpen(false);
+      if (
+        countryDropdownRef.current && !countryDropdownRef.current.contains(event.target) &&
+        agencyDropdownRef.current && !agencyDropdownRef.current.contains(event.target)
+      ) {
+        setIsCountryDropdownOpen(false);
+        setIsAgencyDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // ฟังก์ชันควบคุมการพาไปยังหน้า Rules
+  // ฟังก์ชันควบคุมการพาไปยังหน้า ActivityRules พร้อมส่ง ID ไปด้วย
   const handleNavigateRule = (categoryName, mainId = null) => {
-    setIsRulesDropdownOpen(false);
-    // ถ้ามี mainId จะส่ง state ไปเปิดหน้าตารางย่อยนั้นทันที แต่ถ้าไม่มี (เช่นกด "กฎประเทศ") จะไปหน้ารวม
-    navigate('/rules', { state: { categoryName, selectedMainId: mainId } });
+    setIsCountryDropdownOpen(false);
+    setIsAgencyDropdownOpen(false);
+    navigate('/activity-rules', { state: { categoryName, selectedMainId: mainId } });
   };
 
   return (
@@ -62,15 +73,34 @@ const Navbar = () => {
           {/* MENU & LOGIN BUTTON */}
           <div className="flex items-center space-x-8 text-sm font-medium text-gray-300">
             
-            {/* เมนูกฎประเทศ แบบมี Dropdown */}
-            <div className="relative" ref={dropdownRef}>
+            {/* เมนูหน้าแรก (Home) */}
+            <Link 
+              to="/" 
+              className="hover:text-purple-400 transition-colors duration-200"
+            >
+              Home
+            </Link>
+
+            {/* 1. เมนูกฎประเทศ */}
+            <div 
+              className="relative" 
+              ref={countryDropdownRef}
+              onMouseEnter={() => {
+                setIsCountryDropdownOpen(true);
+                setIsAgencyDropdownOpen(false);
+              }}
+              onMouseLeave={() => setIsCountryDropdownOpen(false)}
+            >
               <button
-                onClick={() => setIsRulesDropdownOpen(!isRulesDropdownOpen)}
-                className="flex items-center gap-2 hover:text-purple-400 transition-colors duration-200 cursor-pointer focus:outline-none"
+                onClick={() => {
+                  setIsCountryDropdownOpen(false);
+                  navigate('/country-rules');
+                }}
+                className="flex items-center gap-2 hover:text-purple-400 transition-colors duration-200 cursor-pointer focus:outline-none py-2"
               >
                 <span>กฎประเทศ</span>
                 <svg 
-                  className={`w-4 h-4 transition-transform duration-200 ${isRulesDropdownOpen ? 'rotate-180' : ''}`} 
+                  className={`w-4 h-4 transition-transform duration-200 ${isCountryDropdownOpen ? 'rotate-180' : ''}`} 
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
@@ -79,20 +109,23 @@ const Navbar = () => {
                 </svg>
               </button>
 
-              {/* กล่องเมนูดรอปดาวน์ย่อย */}
-              {isRulesDropdownOpen && (
-                <div className="absolute left-0 mt-3 w-72 bg-[#0b0b0d] border border-purple-900/60 rounded-xl shadow-2xl py-3 z-50 backdrop-blur-md max-h-[80vh] overflow-y-auto">
+              {/* กล่องเมนูดรอปดาวน์ของกฎประเทศ */}
+              {isCountryDropdownOpen && (
+                <div className="absolute left-0 mt-0 w-72 bg-[#0b0b0d] border border-purple-900/60 rounded-xl shadow-2xl py-3 z-50 backdrop-blur-md max-h-[80vh] overflow-y-auto animate-fadeIn">
                   
-                  {/* 1. กฎประเทศ (กดแล้วไปหน้ารวม Grid ทันที โดยไม่ส่ง mainId) */}
+                  {/* กฎประเทศหลัก */}
                   <button
-                    onClick={() => handleNavigateRule('กฎประเทศ', null)}
+                    onClick={() => {
+                      setIsCountryDropdownOpen(false);
+                      navigate('/country-rules');
+                    }}
                     className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-purple-200 transition-colors flex items-center gap-2 font-semibold border-b border-purple-950/60 cursor-pointer"
                   >
                     <span className="w-2 h-2 rounded-full bg-purple-500"></span>
                     กฎประเทศ
                   </button>
 
-                  {/* 2. กิจกรรม (ดึงชื่อหัวข้อหลักจาก Backend กดแล้วลิงก์เจาะจงไปตารางหัวข้อนั้น) */}
+                  {/* กิจกรรม (ดึงชื่อหัวข้อหลักจาก Backend) */}
                   <div className="py-2 border-b border-purple-950/60">
                     <div className="px-4 py-1 text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-purple-500"></span>
@@ -115,7 +148,7 @@ const Navbar = () => {
                     </div>
                   </div>
 
-                  {/* 3. Safezone */}
+                  {/* Safezone */}
                   <button
                     onClick={() => handleNavigateRule('Safezone', null)}
                     className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-purple-200 transition-colors flex items-center gap-2 font-semibold border-b border-purple-950/60 mt-1 cursor-pointer"
@@ -124,7 +157,7 @@ const Navbar = () => {
                     Safezone
                   </button>
 
-                  {/* 4. กฎ Roleplay พื้นฐาน */}
+                  {/* กฎ Roleplay พื้นฐาน */}
                   <button
                     onClick={() => handleNavigateRule('กฎ Roleplay พื้นฐาน', null)}
                     className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-purple-200 transition-colors flex items-center gap-2 font-semibold border-b border-purple-950/60 cursor-pointer"
@@ -133,7 +166,7 @@ const Navbar = () => {
                     กฎ Roleplay พื้นฐาน
                   </button>
 
-                  {/* 5. Streaming Policy & AI Moderation */}
+                  {/* Streaming Policy & AI Moderation */}
                   <button
                     onClick={() => handleNavigateRule('Streaming Policy & AI Moderation', null)}
                     className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-purple-600/20 hover:text-purple-200 transition-colors flex items-center gap-2 font-semibold mt-1 cursor-pointer"
@@ -145,6 +178,80 @@ const Navbar = () => {
                 </div>
               )}
             </div>
+
+            {/* 2. เมนูกฎหน่วยงาน (วางอยู่ข้างๆ กฎประเทศ พร้อมหัวข้อย่อย กฎตำรวจ, กฎหมอ, กฎสภา) */}
+            <div 
+              className="relative" 
+              ref={agencyDropdownRef}
+              onMouseEnter={() => {
+                setIsAgencyDropdownOpen(true);
+                setIsCountryDropdownOpen(false);
+              }}
+              onMouseLeave={() => setIsAgencyDropdownOpen(false)}
+            >
+              <button
+                onClick={() => {
+                  setIsAgencyDropdownOpen(false);
+                  navigate('/country-rules');
+                }}
+                className="flex items-center gap-2 hover:text-purple-400 transition-colors duration-200 cursor-pointer focus:outline-none py-2"
+              >
+                <span>กฎหน่วยงาน</span>
+                <svg 
+                  className={`w-4 h-4 transition-transform duration-200 ${isAgencyDropdownOpen ? 'rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* กล่องเมนูดรอปดาวน์ของกฎหน่วยงาน */}
+              {isAgencyDropdownOpen && (
+                <div className="absolute left-0 mt-0 w-60 bg-[#0b0b0d] border border-purple-900/60 rounded-xl shadow-2xl py-3 z-50 backdrop-blur-md animate-fadeIn">
+                  <div className="space-y-1 px-2">
+                    <button
+                      onClick={() => handleNavigateRule('กฎตำรวจ', null)}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:text-purple-200 hover:bg-purple-600/20 rounded-lg transition-colors flex items-center gap-2 cursor-pointer font-medium"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                      กฎตำรวจ
+                    </button>
+                    <button
+                      onClick={() => handleNavigateRule('กฎหมอ', null)}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:text-purple-200 hover:bg-purple-600/20 rounded-lg transition-colors flex items-center gap-2 cursor-pointer font-medium"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                      กฎหมอ
+                    </button>
+                    <button
+                      onClick={() => handleNavigateRule('กฎสภา', null)}
+                      className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:text-purple-200 hover:bg-purple-600/20 rounded-lg transition-colors flex items-center gap-2 cursor-pointer font-medium"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                      กฎสภา
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Terms & Conditions */}
+            <Link 
+              to="/terms" 
+              className="hover:text-purple-400 transition-colors duration-200"
+            >
+              Terms & Conditions
+            </Link>
+
+            {/* Refund Policy */}
+            <Link 
+              to="/refund" 
+              className="hover:text-purple-400 transition-colors duration-200"
+            >
+              Refund Policy
+            </Link>
 
             {/* BackOffice */}
             <Link 

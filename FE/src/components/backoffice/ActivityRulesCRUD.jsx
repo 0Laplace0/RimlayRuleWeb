@@ -11,7 +11,8 @@ const ActivityRulesCRUD = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const API_URL = 'http://localhost:5000/api/rules';
+  // เปลี่ยนเส้นทาง URL หลักให้ตรงกับระบบ Route ฝั่ง Backend
+  const API_URL = 'http://localhost:5000/api/activity-rules';
   const token = localStorage.getItem('token');
   const defaultPic = 'https://images.unsplash.com/photo-1548767797-d8c844163c4c?auto=format&fit=crop&w=150&q=80';
 
@@ -19,7 +20,7 @@ const ActivityRulesCRUD = () => {
   const fetchRules = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(API_URL);
+      const res = await axios.get(API_URL); // GET /api/activity-rules
       setRulesList(res.data);
     } catch (err) {
       swalUtils.error('เกิดข้อผิดพลาด!', 'ไม่สามารถดึงข้อมูลกิจกรรมได้');
@@ -63,7 +64,8 @@ const ActivityRulesCRUD = () => {
 
     if (result.isConfirmed) {
       try {
-        await axios.delete(`${API_URL}/main/${item.id}`, {
+        // ปรับเส้นทางตอนลบข้อมูลให้ตรงกับ Path ใหม่ (/delete/:id)
+        await axios.delete(`${API_URL}/delete/${item.id}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         swalUtils.success('ลบข้อมูลสำเร็จ!', `ได้ทำการลบรายการ "${item.title}" เรียบร้อยแล้ว`);
@@ -112,8 +114,18 @@ const ActivityRulesCRUD = () => {
             rules: [...rules, { 
               ruleId: `temp_${Date.now()}`, 
               text: '', 
-              penaltyType: 'ปรับเงิน', 
-              penaltyValue: '500,000 IC / ต่อคน' 
+              penaltyType: 'บทลงโทษ',   
+              penalty_type: 'บทลงโทษ', 
+              penaltyValue: '',
+              penalty_value: ''
+            }],
+            items: [...rules, { 
+              ruleId: `temp_${Date.now()}`, 
+              text: '', 
+              penaltyType: 'บทลงโทษ', 
+              penalty_type: 'บทลงโทษ', 
+              penaltyValue: '',
+              penalty_value: ''
             }]
           };
         }
@@ -142,13 +154,44 @@ const ActivityRulesCRUD = () => {
       subGroups: form.subGroups.map(sg => {
         if (sg.subId === subId || sg.id === subId) {
           const rulesList = sg.rules || sg.items || [];
-          const updated = rulesList.map(r => 
-            (r.ruleId === ruleId || r.id === ruleId) ? { ...r, [field]: value } : r
-          );
+          const updated = rulesList.map(r => {
+            if (r.ruleId === ruleId || r.id === ruleId) {
+              const updatedItem = { ...r, [field]: value };
+              if (field === 'penaltyValue') {
+                updatedItem.penalty_value = value;
+              }
+              if (field === 'penaltyType') {
+                updatedItem.penalty_type = value;
+              }
+              return updatedItem;
+            }
+            return r;
+          });
           return { ...sg, rules: updated, items: updated };
         }
         return sg;
       })
+    });
+  };
+
+  const handleAppendPenalty = (subId, ruleId, currentVal, word) => {
+    const baseText = currentVal || '';
+    const newText = baseText.trim() ? `${baseText} ${word}` : word;
+    handleUpdateRule(subId, ruleId, 'penaltyValue', newText);
+  };
+
+  const renderPenaltyString = (str) => {
+    if (!str) return null;
+    const parts = str.split(/(ใบแดงถาวร|ใบแดง|ใบส้ม|ใบเหลือง|ปรับ)/g);
+    return parts.map((part, i) => {
+      switch (part) {
+        case 'ปรับ': return <span key={i} className="text-emerald-400 font-bold">{part}</span>;
+        case 'ใบเหลือง': return <span key={i} className="text-yellow-400 font-bold">{part}</span>;
+        case 'ใบส้ม': return <span key={i} className="text-orange-400 font-bold">{part}</span>;
+        case 'ใบแดง': return <span key={i} className="text-red-500 font-bold">{part}</span>;
+        case 'ใบแดงถาวร': return <span key={i} className="text-red-700 font-bold">{part}</span>;
+        default: return <span key={i}>{part}</span>;
+      }
     });
   };
 
@@ -172,7 +215,6 @@ const ActivityRulesCRUD = () => {
     try {
       const payload = {
         title: form.title,
-        icon: defaultPic,
         footerNote: form.footerNote,
         footer_note: form.footerNote,
         subGroups: form.subGroups
@@ -181,10 +223,12 @@ const ActivityRulesCRUD = () => {
       const config = { headers: { Authorization: `Bearer ${token}` } };
 
       if (view === 'add') {
-        await axios.post(`${API_URL}/full`, payload, config);
+        // POST /api/activity-rules/create
+        await axios.post(`${API_URL}/create`, payload, config);
         swalUtils.success('เพิ่มข้อมูลกิจกรรมสำเร็จแล้ว!');
       } else {
-        await axios.put(`${API_URL}/full/${form.id}`, payload, config);
+        // PUT /api/activity-rules/update/:id
+        await axios.put(`${API_URL}/update/${form.id}`, payload, config);
         swalUtils.success('อัปเดตข้อมูลกิจกรรมสำเร็จแล้ว!');
       }
 
@@ -216,6 +260,7 @@ const ActivityRulesCRUD = () => {
                   setCurrentPage(1);
                 }}
                 className="w-full md:w-64 px-5 py-2 rounded-full bg-[#121216] border border-purple-950/80 focus:outline-none focus:border-purple-500 text-sm text-white shadow-inner"
+                placeholder="ค้นหาหัวข้อ..."
               />
               <button
                 onClick={handleOpenAdd}
@@ -271,7 +316,7 @@ const ActivityRulesCRUD = () => {
             </h1>
           </div>
 
-          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-6 text-sm pt-4">
+          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6 text-sm pt-4">
             <div className="bg-[#181125]/40 p-6 rounded-2xl border border-purple-950/40 space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center">
                 <label className="sm:w-36 text-gray-400 font-semibold mb-1">ชื่อหัวข้อหลัก</label>
@@ -298,60 +343,74 @@ const ActivityRulesCRUD = () => {
                 const subKey = sg.subId || sg.id;
                 const rulesItems = sg.rules || sg.items || [];
                 return (
-                  <div key={subKey} className="bg-[#181125]/80 p-5 rounded-2xl border border-purple-900/30 space-y-4 relative">
+                  <div key={subKey} className="bg-[#181125]/80 p-5 rounded-2xl border border-purple-900/30 space-y-5 relative">
                     <button type="button" onClick={() => handleRemoveSubGroup(subKey)} className="absolute top-4 right-4 text-gray-500 hover:text-rose-500 cursor-pointer" title="ลบกลุ่มนี้">
                       ✕
                     </button>
 
                     <div className="flex items-center gap-3 pr-10">
-                      <span className="text-purple-400 font-bold bg-purple-900/30 px-3 py-1.5 rounded-lg text-xs">#{index + 1}</span>
+                      <div className="w-12 h-12 rounded-xl bg-purple-900/40 border border-purple-700/50 flex items-center justify-center shrink-0 shadow-inner">
+                        <span className="text-purple-300 font-black text-lg">#{index + 1}</span>
+                      </div>
                       <input
                         type="text"
                         required
+                        placeholder="ชื่อหมวดหมู่กฎย่อย..."
                         value={sg.subTitle || sg.sub_title || ''}
                         onChange={(e) => handleUpdateSubGroupTitle(subKey, e.target.value)}
-                        className="flex-1 px-4 py-2 rounded-xl bg-[#121216] border border-purple-950/60 text-white font-semibold"
+                        className="flex-1 px-4 py-3 rounded-xl bg-[#121216] border border-purple-950/60 text-white font-semibold focus:outline-none focus:border-purple-500"
                       />
                     </div>
 
-                    {/* รายการข้อกฎหมาย + ค่าปรับ */}
-                    <div className="pl-0 sm:pl-12 space-y-3">
+                    <div className="pl-0 sm:pl-14 space-y-3">
                       {rulesItems.map((rule) => {
                         const ruleKey = rule.ruleId || rule.id;
+                        const currentVal = rule.penaltyValue ?? rule.penalty_value ?? '';
                         return (
-                          <div key={ruleKey} className="flex flex-col md:flex-row items-stretch md:items-center gap-2 bg-[#121216] p-3 rounded-xl border border-purple-950/30 group">
-                            <input
-                              type="text"
-                              required
-                              value={rule.text}
-                              onChange={(e) => handleUpdateRule(subKey, ruleKey, 'text', e.target.value)}
-                              className="flex-1 px-3 py-1.5 bg-transparent border-none outline-none text-gray-300 text-xs"
-                            />
-
-                            <div className="flex items-center gap-2 shrink-0 border-t md:border-t-0 pt-2 md:pt-0 border-purple-950/40">
-                              {/* เปลี่ยน text สีของ select เป็นสีขาว (text-white) */}
-                              <select
-                                value={rule.penaltyType || rule.penalty_type || 'ปรับเงิน'}
-                                onChange={(e) => handleUpdateRule(subKey, ruleKey, 'penaltyType', e.target.value)}
-                                className="w-32 px-2 py-1 bg-[#181125] border border-purple-900/40 rounded-lg text-white text-xs text-center focus:outline-none focus:border-purple-500 cursor-pointer"
-                              >
-                                <option value="ปรับเงิน">ปรับเงิน</option>
-                                <option value="ใบเหลือง">ใบเหลือง</option>
-                                <option value="ใบส้ม">ใบส้ม</option>
-                                <option value="ใบแดง">ใบแดง</option>
-                                <option value="ใบแดงถาวร">ใบแดงถาวร</option>
-                              </select>
-
+                          <div key={ruleKey} className="flex flex-col xl:flex-row items-start gap-4 bg-[#121216] p-4 rounded-xl border border-purple-950/30">
+                            
+                            <div className="flex-1 w-full">
                               <input
                                 type="text"
-                                value={rule.penaltyValue || rule.penalty_value || '500,000 IC / ต่อคน'}
-                                onChange={(e) => handleUpdateRule(subKey, ruleKey, 'penaltyValue', e.target.value)}
-                                className="w-40 px-2 py-1 bg-[#181125] border border-purple-900/40 rounded-lg text-white text-xs text-center font-semibold"
+                                required
+                                placeholder="รายละเอียดข้อบังคับ / กฎ..."
+                                value={rule.text}
+                                onChange={(e) => handleUpdateRule(subKey, ruleKey, 'text', e.target.value)}
+                                className="w-full px-4 py-2.5 bg-[#181125] border border-purple-900/40 rounded-lg outline-none text-gray-200 text-sm focus:border-purple-500"
                               />
-                              <button type="button" onClick={() => handleRemoveRule(subKey, ruleKey)} className="p-1.5 text-gray-500 hover:text-rose-500 rounded-lg cursor-pointer">
-                                🗑
-                              </button>
                             </div>
+
+                            <div className="flex-1 w-full flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="บทลงโทษ (เช่น ใบเหลือง, ปรับ 50,000)"
+                                  value={currentVal}
+                                  onChange={(e) => handleUpdateRule(subKey, ruleKey, 'penaltyValue', e.target.value)}
+                                  className="flex-1 px-4 py-2.5 bg-[#181125] border border-purple-900/40 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500"
+                                />
+                                <button type="button" onClick={() => handleRemoveRule(subKey, ruleKey)} className="p-3 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0">
+                                  🗑
+                                </button>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-[10px] text-gray-500 font-semibold">แทรกลำดับขั้น:</span>
+                                <button type="button" onClick={() => handleAppendPenalty(subKey, ruleKey, currentVal, 'ปรับ')} className="px-2 py-1 text-[10px] font-bold rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 transition cursor-pointer">ปรับ</button>
+                                <button type="button" onClick={() => handleAppendPenalty(subKey, ruleKey, currentVal, 'ใบเหลือง')} className="px-2 py-1 text-[10px] font-bold rounded bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 border border-yellow-500/30 transition cursor-pointer">ใบเหลือง</button>
+                                <button type="button" onClick={() => handleAppendPenalty(subKey, ruleKey, currentVal, 'ใบส้ม')} className="px-2 py-1 text-[10px] font-bold rounded bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 border border-orange-500/30 transition cursor-pointer">ใบส้ม</button>
+                                <button type="button" onClick={() => handleAppendPenalty(subKey, ruleKey, currentVal, 'ใบแดง')} className="px-2 py-1 text-[10px] font-bold rounded bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/30 transition cursor-pointer">ใบแดง</button>
+                                <button type="button" onClick={() => handleAppendPenalty(subKey, ruleKey, currentVal, 'ใบแดงถาวร')} className="px-2 py-1 text-[10px] font-bold rounded bg-rose-900/20 text-rose-500 hover:bg-rose-900/40 border border-rose-700/50 transition cursor-pointer">ใบแดงถาวร</button>
+                              </div>
+
+                              {currentVal && (
+                                <div className="mt-1 text-xs text-gray-300 bg-black/40 px-3 py-2.5 rounded-lg border border-purple-950/40">
+                                  <span className="text-gray-500 mr-2 font-semibold">พรีวิว:</span> 
+                                  {renderPenaltyString(currentVal)}
+                                </div>
+                              )}
+                            </div>
+
                           </div>
                         );
                       })}
@@ -365,7 +424,6 @@ const ActivityRulesCRUD = () => {
               })}
             </div>
 
-            {/* กล่องหมายเหตุท้ายหน้า */}
             <div className="bg-[#181125]/40 p-6 rounded-2xl border border-purple-950/40 space-y-2">
               <label className="text-gray-400 font-semibold block text-xs">หมายเหตุท้ายหน้า</label>
               <input
