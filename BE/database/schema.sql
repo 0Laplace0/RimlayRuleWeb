@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Rules Schema
 
--- 1. ตารางหมวดหมู่หลัก (ปรับปรุงให้รองรับ category และแก้ unique key)
+-- 1. ตารางหมวดหมู่หลัก
 CREATE TABLE IF NOT EXISTS rule_categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     category VARCHAR(50) NOT NULL DEFAULT 'activity' COMMENT 'ประเภทหมวดหมู่ เช่น activity, country, safezone',
@@ -62,4 +62,11 @@ CREATE TABLE IF NOT EXISTS rule_footers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES rule_categories(id) ON DELETE CASCADE,
     FOREIGN KEY (subcategory_id) REFERENCES rule_subcategories(id) ON DELETE CASCADE
+);
+
+CREATE TABLE rule_sub_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  item_id INT NOT NULL,
+  content TEXT NOT NULL,
+  FOREIGN KEY (item_id) REFERENCES rules(id) ON DELETE CASCADE
 );

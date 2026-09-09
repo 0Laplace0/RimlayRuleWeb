@@ -13,7 +13,6 @@ const ActivityRules = () => {
     const fetchRules = async () => {
       try {
         setLoading(true);
-        // เปลี่ยนมาใช้ endpoint เดียวกันกับเมนูใน Navbar เพื่อให้ข้อมูลตรงกัน
         const response = await fetch('http://localhost:5000/api/activity-rules');
         if (!response.ok) {
           throw new Error('ไม่สามารถดึงข้อมูลกฎระเบียบได้');
@@ -56,16 +55,6 @@ const ActivityRules = () => {
     fetchRules();
   }, [location.state]);
 
-  // รวบรวม items จากทุก subGroups ออกมาแสดงเป็นตารางเดียวต่อเนื่องกัน
-  const allRulesItems = [];
-  selectedCategory?.subGroups?.forEach((sub) => {
-    const items = sub.rules || sub.items || [];
-    items.forEach((item) => {
-      allRulesItems.push(item);
-    });
-  });
-
-  // ฟังก์ชันช่วยจัดรูปแบบป้ายเฉพาะคำหลัก บทลงโทษ และให้ตัวเลข/ข้อความอื่นเป็น text ธรรมดา
   const renderPenaltyBadge = (penaltyText) => {
     if (!penaltyText) return <span className="text-gray-500">-</span>;
 
@@ -97,14 +86,7 @@ const ActivityRules = () => {
               </span>
             );
           }
-          if (word.includes('ใบแดงถาวร')) {
-            return (
-              <span key={idx} className="px-2.5 py-1 bg-red-500/20 border border-red-500/50 text-red-400 rounded-md text-xs font-bold shadow-sm">
-                {word}
-              </span>
-            );
-          }
-          if (word.includes('ใบแดง')) {
+          if (word.includes('ใบแดงถาวร') || word.includes('ใบแดง')) {
             return (
               <span key={idx} className="px-2.5 py-1 bg-red-500/20 border border-red-500/50 text-red-400 rounded-md text-xs font-bold shadow-sm">
                 {word}
@@ -126,7 +108,7 @@ const ActivityRules = () => {
       <Navbar />
 
       <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 flex flex-col items-center">
-        {loading && <p className="text-purple-400 animate-pulse mt-10">กำลังโหลดข้อมูลกฎระเบียบ...</p>}
+        {loading && <p className="text-[#80deea] animate-pulse mt-10">กำลังโหลดข้อมูลกฎระเบียบ...</p>}
         {error && <p className="text-rose-500 mt-10">เกิดข้อผิดพลาด: {error}</p>}
 
         {!loading && !error && selectedCategory && (
@@ -138,41 +120,64 @@ const ActivityRules = () => {
               </h1>
             </div>
 
-            {/* ตารางแสดง กฎข้อบังคับ และ บทลงโทษ */}
-            <div className="bg-[#181125]/80 border border-purple-950/80 rounded-2xl overflow-hidden shadow-lg">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-purple-900/50 text-red-400 font-bold text-base">
-                    <th className="p-4 w-3/4">กฎข้อบังคับ</th>
-                    <th className="p-4 w-1/4 border-l border-purple-900/50">บทลงโทษ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-purple-950/40 text-sm">
-                  {allRulesItems.length > 0 ? (
-                    allRulesItems.map((rule, index) => (
-                      <tr key={rule.id || index} className="hover:bg-purple-950/20 transition align-top">
-                        <td className="p-4 text-gray-200 leading-relaxed">
-                          {index + 1}. {rule.text}
-                        </td>
-                        <td className="p-4 font-semibold border-l border-purple-900/40">
-                          {renderPenaltyBadge(rule.penaltyValue || rule.penalty_value)}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="2" className="p-6 text-center text-gray-500">
-                        ยังไม่มีข้อมูลกฎข้อบังคับในหมวดนี้
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+            {/* แสดงผลแยกตามหมวดหมู่ย่อย (Sub-groups) */}
+            <div className="space-y-8">
+              {selectedCategory?.subGroups && selectedCategory.subGroups.length > 0 ? (
+                selectedCategory.subGroups.map((subGroup, subIndex) => {
+                  const rulesList = subGroup.rules || subGroup.items || [];
+                  return (
+                    <div key={subGroup.id || subIndex} className="space-y-3">
+                      {/* ชื่อกลุ่มย่อย */}
+                      {subGroup.subTitle && (
+                        <h3 className="text-lg font-bold text-[#80deea] border-l-4 border-[#80deea] pl-3">
+                          {subGroup.subTitle}
+                        </h3>
+                      )}
+
+                      {/* ตารางของกลุ่มย่อยนี้ */}
+                      <div className="bg-[#111a1f]/80 border border-[#80deea]/40 rounded-2xl overflow-hidden shadow-lg">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-[#80deea]/30 text-white font-bold text-base">
+                              <th className="p-4 w-3/4">กฎข้อบังคับ</th>
+                              <th className="p-4 w-1/4 border-l border-[#80deea]/30 text-red-400">บทลงโทษ</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#80deea]/10 text-sm">
+                            {rulesList.length > 0 ? (
+                              rulesList.map((rule, ruleIndex) => (
+                                <tr key={rule.id || ruleIndex} className="hover:bg-[#80deea]/10 transition align-top">
+                                  <td className="p-4 text-white leading-relaxed font-medium">
+                                    {ruleIndex + 1}. {rule.text}
+                                  </td>
+                                  <td className="p-4 font-semibold border-l border-[#80deea]/20">
+                                    {renderPenaltyBadge(rule.penaltyValue || rule.penalty_value)}
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan="2" className="p-6 text-center text-gray-400">
+                                  ยังไม่มีข้อมูลกฎข้อบังคับในกลุ่มย่อยนี้
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="bg-[#111a1f]/80 border border-[#80deea]/40 rounded-2xl p-8 text-center text-gray-400">
+                  ยังไม่มีข้อมูลกฎข้อบังคับในหมวดนี้
+                </div>
+              )}
             </div>
 
             {/* หมายเหตุท้ายหน้า (ถ้ามี) */}
             {(selectedCategory.footerNote || selectedCategory.footer_note) && (
-              <div className="bg-amber-950/20 border border-amber-500/30 p-4 rounded-xl text-amber-300 text-xs text-center">
+              <div className="bg-[#80deea]/10 border border-[#80deea]/40 p-4 rounded-xl text-[#80deea] text-xs text-center">
                 <strong>หมายเหตุ:</strong> {selectedCategory.footerNote || selectedCategory.footer_note}
               </div>
             )}

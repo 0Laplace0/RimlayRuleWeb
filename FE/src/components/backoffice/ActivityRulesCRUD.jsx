@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { swalUtils } from '../../utils/swalUtils.js';
+import Pagination from '../Pagination';
 
 const ActivityRulesCRUD = () => {
   const [rulesList, setRulesList] = useState([]);
@@ -237,7 +238,7 @@ const ActivityRulesCRUD = () => {
     }
   };
 
-  const totalPages = Math.ceil(filteredRules.length / itemsPerPage);
+  const totalPages = Math.ceil(filteredRules.length / itemsPerPage) || 1;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredRules.slice(indexOfFirstItem, indexOfLastItem);
@@ -247,7 +248,7 @@ const ActivityRulesCRUD = () => {
       {view === 'table' ? (
         <div>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <h2 className="text-2xl font-bold text-purple-300">จัดการข้อมูล: กิจกรรม</h2>
+            <h2 className="text-2xl font-bold text-white">จัดการข้อมูล: กิจกรรม</h2>
             
             <div className="flex items-center gap-3 w-full md:w-auto">
               <input
@@ -257,7 +258,7 @@ const ActivityRulesCRUD = () => {
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full md:w-64 px-5 py-2 rounded-full bg-[#121216] border border-purple-950/80 focus:outline-none focus:border-purple-500 text-sm text-white shadow-inner"
+                className="w-full md:w-64 px-5 py-2 rounded-full bg-[#0f172a] border border-indigo-950/85 focus:outline-none focus:border-indigo-500 text-sm text-white shadow-inner"
                 placeholder="ค้นหาหัวข้อ..."
               />
               <button
@@ -269,9 +270,9 @@ const ActivityRulesCRUD = () => {
             </div>
           </div>
 
-          <div className="overflow-x-auto border border-purple-950/60 rounded-lg">
+          <div className="overflow-x-auto border border-indigo-950/60 rounded-lg">
             <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-[#181125] border-b border-purple-950/60 text-purple-300 font-bold">
+              <thead className="bg-[#1e293b] border-b border-indigo-950/60 text-indigo-300 font-bold">
                 <tr>
                   <th className="p-4 text-center w-16">No.</th>
                   <th className="p-4">ชื่อหัวข้อหลัก (Title)</th>
@@ -279,17 +280,21 @@ const ActivityRulesCRUD = () => {
                   <th className="p-4 text-center w-24">delete</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-purple-950/20">
+              <tbody className="divide-y divide-indigo-950/20">
                 {loading ? (
                   <tr>
                     <td colSpan="4" className="text-center p-8 text-gray-400">กำลังโหลดข้อมูล...</td>
                   </tr>
+                ) : currentItems.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="text-center p-8 text-gray-400">ไม่พบข้อมูล</td>
+                  </tr>
                 ) : currentItems.map((item, index) => (
-                  <tr key={item.id} className="hover:bg-purple-950/10 transition">
+                  <tr key={item.id} className="hover:bg-indigo-950/10 transition">
                     <td className="p-4 text-center text-gray-400">{indexOfFirstItem + index + 1}.</td>
                     <td className="p-4 font-semibold text-white">
                       {item.title} 
-                      <span className="text-xs text-purple-400/80 ml-3 bg-purple-900/30 px-2 py-0.5 rounded-full">
+                      <span className="text-xs text-indigo-400/80 ml-3 bg-indigo-900/30 px-2 py-0.5 rounded-full">
                         {(item.subGroups || []).length} Sub-groups
                       </span>
                     </td>
@@ -304,18 +309,28 @@ const ActivityRulesCRUD = () => {
               </tbody>
             </table>
           </div>
+
+          {/* เรียกใช้งาน Pagination Component */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            indexOfFirstItem={indexOfFirstItem}
+            indexOfLastItem={indexOfLastItem}
+            totalItems={filteredRules.length}
+          />
         </div>
       ) : (
         /* Form View */
         <div className="space-y-6">
-          <div className="bg-[#181125] border border-purple-950/60 py-4 px-6 rounded-lg text-center shadow-lg">
-            <h1 className="text-lg font-bold text-purple-300 tracking-wide">
+          <div className="bg-[#1e293b] border border-indigo-950/60 py-4 px-6 rounded-lg text-center shadow-lg">
+            <h1 className="text-lg font-bold text-indigo-300 tracking-wide">
               :: {view === 'add' ? 'เพิ่มข้อมูลกิจกรรม' : 'แก้ไขข้อมูลกิจกรรม'} ::
             </h1>
           </div>
 
           <form onSubmit={handleSubmit} className="max-w-4xl mx-auto space-y-6 text-sm pt-4">
-            <div className="bg-[#181125]/40 p-6 rounded-2xl border border-purple-950/40 space-y-5">
+            <div className="bg-[#1e293b]/40 p-6 rounded-2xl border border-indigo-950/40 space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center">
                 <label className="sm:w-36 text-gray-400 font-semibold mb-1">ชื่อหัวข้อหลัก</label>
                 <input
@@ -323,16 +338,16 @@ const ActivityRulesCRUD = () => {
                   required
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#121216] border border-purple-950/60 focus:outline-none focus:border-purple-500 text-white"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-[#0f172a] border border-indigo-950/60 focus:outline-none focus:border-indigo-500 text-white"
                 />
               </div>
             </div>
 
             {/* Sub-groups */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-purple-950/40 pb-2">
-                <h3 className="text-md font-bold text-purple-300">หมวดหมู่กฎย่อย & บทลงโทษ</h3>
-                <button type="button" onClick={handleAddSubGroup} className="px-4 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/50 text-emerald-400 rounded-full text-xs font-bold transition cursor-pointer">
+              <div className="flex items-center justify-between border-b border-indigo-950/40 pb-2">
+                <h3 className="text-md font-bold text-indigo-300">หมวดหมู่กฎย่อย & บทลงโทษ</h3>
+                <button type="button" onClick={handleAddSubGroup} className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-400 rounded-full text-xs font-bold transition cursor-pointer">
                   + เพิ่มกลุ่มย่อย
                 </button>
               </div>
@@ -341,14 +356,14 @@ const ActivityRulesCRUD = () => {
                 const subKey = sg.subId || sg.id;
                 const rulesItems = sg.rules || sg.items || [];
                 return (
-                  <div key={subKey} className="bg-[#181125]/80 p-5 rounded-2xl border border-purple-900/30 space-y-5 relative">
+                  <div key={subKey} className="bg-[#1e293b]/80 p-5 rounded-2xl border border-indigo-900/30 space-y-5 relative">
                     <button type="button" onClick={() => handleRemoveSubGroup(subKey)} className="absolute top-4 right-4 text-gray-500 hover:text-rose-500 cursor-pointer" title="ลบกลุ่มนี้">
                       ✕
                     </button>
 
                     <div className="flex items-center gap-3 pr-10">
-                      <div className="w-12 h-12 rounded-xl bg-purple-900/40 border border-purple-700/50 flex items-center justify-center shrink-0 shadow-inner">
-                        <span className="text-purple-300 font-black text-lg">#{index + 1}</span>
+                      <div className="w-12 h-12 rounded-xl bg-indigo-900/40 border border-indigo-700/50 flex items-center justify-center shrink-0 shadow-inner">
+                        <span className="text-indigo-300 font-black text-lg">#{index + 1}</span>
                       </div>
                       <input
                         type="text"
@@ -356,7 +371,7 @@ const ActivityRulesCRUD = () => {
                         placeholder="ชื่อหมวดหมู่กฎย่อย..."
                         value={sg.subTitle || sg.sub_title || ''}
                         onChange={(e) => handleUpdateSubGroupTitle(subKey, e.target.value)}
-                        className="flex-1 px-4 py-3 rounded-xl bg-[#121216] border border-purple-950/60 text-white font-semibold focus:outline-none focus:border-purple-500"
+                        className="flex-1 px-4 py-3 rounded-xl bg-[#0f172a] border border-indigo-950/60 text-white font-semibold focus:outline-none focus:border-indigo-500"
                       />
                     </div>
 
@@ -365,7 +380,7 @@ const ActivityRulesCRUD = () => {
                         const ruleKey = rule.ruleId || rule.id;
                         const currentVal = rule.penaltyValue ?? rule.penalty_value ?? '';
                         return (
-                          <div key={ruleKey} className="flex flex-col xl:flex-row items-start gap-4 bg-[#121216] p-4 rounded-xl border border-purple-950/30">
+                          <div key={ruleKey} className="flex flex-col xl:flex-row items-start gap-4 bg-[#0f172a] p-4 rounded-xl border border-indigo-950/30">
                             
                             <div className="flex-1 w-full">
                               <input
@@ -374,7 +389,7 @@ const ActivityRulesCRUD = () => {
                                 placeholder="รายละเอียดข้อบังคับ / กฎ..."
                                 value={rule.text}
                                 onChange={(e) => handleUpdateRule(subKey, ruleKey, 'text', e.target.value)}
-                                className="w-full px-4 py-2.5 bg-[#181125] border border-purple-900/40 rounded-lg outline-none text-gray-200 text-sm focus:border-purple-500"
+                                className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg outline-none text-gray-200 text-sm focus:border-indigo-500"
                               />
                             </div>
 
@@ -385,7 +400,7 @@ const ActivityRulesCRUD = () => {
                                   placeholder="บทลงโทษ (เช่น ใบเหลือง, ปรับ 50,000)"
                                   value={currentVal}
                                   onChange={(e) => handleUpdateRule(subKey, ruleKey, 'penaltyValue', e.target.value)}
-                                  className="flex-1 px-4 py-2.5 bg-[#181125] border border-purple-900/40 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500"
+                                  className="flex-1 px-4 py-2.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-white text-sm focus:outline-none focus:border-indigo-500"
                                 />
                                 <button type="button" onClick={() => handleRemoveRule(subKey, ruleKey)} className="p-3 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0">
                                   🗑
@@ -402,7 +417,7 @@ const ActivityRulesCRUD = () => {
                               </div>
 
                               {currentVal && (
-                                <div className="mt-1 text-xs text-gray-300 bg-black/40 px-3 py-2.5 rounded-lg border border-purple-950/40">
+                                <div className="mt-1 text-xs text-gray-300 bg-black/40 px-3 py-2.5 rounded-lg border border-indigo-950/40">
                                   <span className="text-gray-500 mr-2 font-semibold">พรีวิว:</span> 
                                   {renderPenaltyString(currentVal)}
                                 </div>
@@ -422,17 +437,17 @@ const ActivityRulesCRUD = () => {
               })}
             </div>
 
-            <div className="bg-[#181125]/40 p-6 rounded-2xl border border-purple-950/40 space-y-2">
+            <div className="bg-[#1e293b]/40 p-6 rounded-2xl border border-indigo-950/40 space-y-2">
               <label className="text-gray-400 font-semibold block text-xs">หมายเหตุท้ายหน้า</label>
               <input
                 type="text"
                 value={form.footerNote}
                 onChange={(e) => setForm({ ...form, footerNote: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl bg-[#121216] border border-amber-500/30 text-amber-300 text-xs"
+                className="w-full px-4 py-2.5 rounded-xl bg-[#0f172a] border border-amber-500/30 text-amber-300 text-xs"
               />
             </div>
 
-            <div className="flex items-center justify-center space-x-3 pt-6 border-t border-purple-950/40">
+            <div className="flex items-center justify-center space-x-3 pt-6 border-t border-indigo-950/40">
               <button type="submit" className="px-8 py-2.5 rounded-full font-bold text-white bg-blue-600 hover:bg-blue-500 cursor-pointer">Save Data</button>
               <button type="button" onClick={() => setView('table')} className="px-8 py-2.5 rounded-full font-bold text-white bg-rose-600 hover:bg-rose-500 cursor-pointer">Cancel</button>
             </div>

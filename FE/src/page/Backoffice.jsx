@@ -4,14 +4,18 @@ import { swalUtils } from '@/utils/swalUtils.js';
 
 import ActivityRulesCRUD from '@/components/backoffice/ActivityRulesCRUD';
 import CountryRulesCRUD from '@/components/backoffice/CountryRulesCRUD';
+import TermsRulesCRUD from '@/components/backoffice/TermsRulesCRUD';
+import RefundRulesCRUD from '@/components/backoffice/RefundRulesCRUD';
 import ActivityLog from '@/components/backoffice/ActivityLog';
 
 const Backoffice = () => {
-  const [activeMenu, setActiveMenu] = useState('ActivityRules');
+  const [activeMenu, setActiveMenu] = useState('RefundRules');
 
   const sidebarMenus = [
     { id: 'CountryRules', name: '- จัดการกฎประเทศ -' },
     { id: 'ActivityRules', name: '- จัดการกฎกิจกรรม -' },
+    { id: 'TermsRules', name: '- จัดการ Terms & Conditions -' },
+    { id: 'RefundRules', name: '- จัดการ Refund Policy -' },
     { id: 'ActivityLog', name: '- Realtime Activity Log -' },
   ];
 
@@ -24,9 +28,8 @@ const Backoffice = () => {
       const isConfirmed = typeof result === 'object' ? result.isConfirmed : result;
 
       if (isConfirmed === true) {
-        localStorage.removeItem('token'); // เพิ่มการลบ Token
+        localStorage.removeItem('token');
         swalUtils.success('ออกจากระบบแล้ว!', 'คุณได้ออกจากระบบเรียบร้อยแล้ว');
-        // window.location.href = '/login'; // หรือใช้ useNavigate ของ react-router-dom
       } else {
         return;
       }
@@ -41,28 +44,32 @@ const Backoffice = () => {
         return <CountryRulesCRUD />;
       case 'ActivityRules':
         return <ActivityRulesCRUD />;
+      case 'TermsRules':
+        return <TermsRulesCRUD />;
+      case 'RefundRules':
+        return <RefundRulesCRUD />;
       case 'ActivityLog':
         return <ActivityLog />;
       default:
         return (
           <div className="text-center py-24 text-gray-500">
-            <h3 className="text-purple-300 font-bold mb-1">ไม่พบเมนูจัดการนี้</h3>
+            <h3 className="text-blue-400 font-bold mb-1">ไม่พบเมนูจัดการนี้</h3>
           </div>
         );
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0d11] text-white flex flex-col w-full">
+    <div className="min-h-screen bg-[#070a12] text-white flex flex-col w-full">
       <Navbar />
 
       <div className="flex-1 w-full max-w-full px-6 py-8 flex flex-col lg:flex-row gap-6">
         
-        {/* SIDEBAR */}
+        {/* SIDEBAR (ปรับสีเปลี่ยนจากเขียวให้ตรงกับหน้า Content) */}
         <aside className="w-full lg:w-64 shrink-0">
-          <div className="bg-[#0b0b0d] border border-purple-950/60 rounded-lg overflow-hidden shadow-2xl">
-            <div className="bg-[#181125] border-b border-purple-950/60 px-4 py-3 text-center">
-              <span className="font-bold text-purple-300 tracking-wide text-sm">Home</span>
+          <div className="bg-[#0f172a]/90 border border-indigo-950/60 rounded-xl overflow-hidden shadow-2xl">
+            <div className="bg-[#1e293b]/70 border-b border-indigo-950/60 px-4 py-3 text-center">
+              <span className="font-bold text-blue-400 tracking-wide text-sm">Home</span>
             </div>
             
             <nav className="flex flex-col">
@@ -70,20 +77,20 @@ const Backoffice = () => {
                 <button
                   key={menu.id}
                   onClick={() => setActiveMenu(menu.id)}
-                  className={`w-full py-3 px-4 text-xs font-semibold text-center border-b border-purple-950/20 transition-all duration-300 cursor-pointer ${
+                  className={`w-full py-3 px-4 text-xs font-semibold text-center border-b border-indigo-950/30 transition-all duration-300 cursor-pointer ${
                     activeMenu === menu.id
-                      ? 'bg-purple-600/10 text-purple-400 border-r-4 border-r-purple-500'
-                      : 'text-gray-400 hover:bg-[#121217] hover:text-purple-300'
+                      ? 'bg-blue-600/15 text-blue-400 border-r-4 border-r-blue-500 font-bold'
+                      : 'text-gray-400 hover:bg-[#1e293b]/40 hover:text-blue-300'
                   }`}
                 >
                   {menu.name}
                 </button>
               ))}
               
-              {/* ปุ่มออกจากระบบเรียกใช้งาน handleLogout */}
+              {/* ปุ่มออกจากระบบ */}
               <button
                 onClick={handleLogout}
-                className="w-full py-3 px-4 text-xs font-semibold text-center text-rose-400 bg-rose-950/10 hover:bg-rose-950/20 transition-all duration-300 cursor-pointer"
+                className="w-full py-3 px-4 text-xs font-semibold text-center text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 transition-all duration-300 cursor-pointer"
               >
                 - ออกจากระบบ -
               </button>
@@ -91,8 +98,8 @@ const Backoffice = () => {
           </div>
         </aside>
 
-        {/* CONTENT AREA */}
-        <main className="flex-1 bg-[#0b0b0d] border border-purple-950/60 rounded-lg p-6 md:p-8 shadow-2xl min-h-[600px] overflow-hidden">
+        {/* CONTENT AREA (คงสีและโครงสร้างเดิมในกรอบสีแดงไว้ทั้งหมด) */}
+        <main className="flex-1 bg-[#0b0e17] border border-indigo-950/60 rounded-xl p-6 md:p-8 shadow-2xl min-h-[600px] overflow-hidden">
           {renderContent()}
         </main>
 
