@@ -1,69 +1,54 @@
-const pool = require('../config/db');
+const prisma = require('../config/prisma');
+
+const generateSlug = (text) => {
+  return text.toLowerCase().replace(/&/g, 'and').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
+};
 
 const getRefundPolicy = async (req, res) => {
   try {
-    // 1. ดึงข้อมูลหมวดหมู่หลักทั้งหมดที่เป็น refund
-    const [categories] = await pool.query('SELECT * FROM rule_categories WHERE category = "refund" ORDER BY id ASC');
-    
-    const result = [];
-
-    for (const cat of categories) {
-      // 2. ดึงข้อมูลหมวดหมู่ย่อย (Rule Subcategories)
-      const [subcategories] = await pool.query(
-        'SELECT * FROM rule_subcategories WHERE category_id = ? ORDER BY id ASC',
-        [cat.id]
-      );
-
-      const subGroups = [];
-
-      for (const sub of subcategories) {
-        // 3. ดึงรายการข้อใหญ่ (Rules)
-        const [rules] = await pool.query(
-          'SELECT id, rule_text, penalty_value FROM rules WHERE category_id = ? AND subcategory_id = ? ORDER BY id ASC',
-          [cat.id, sub.id]
-        );
-
-        const rulesList = [];
-
-        for (const rule of rules) {
-          // 4. ดึงข้อย่อย (Sub-items)
-          const [subItems] = await pool.query(
-            'SELECT id, content FROM rule_sub_items WHERE item_id = ? ORDER BY id ASC',
-            [rule.id]
-          );
-
-          rulesList.push({
-            ruleId: rule.id,
-            text: rule.rule_text,
-            penaltyValue: rule.penalty_value || '', 
-            subItems: subItems.map(si => ({
-              subItemId: si.id,
-              text: si.content
-            }))
-          });
-        }
-
-        subGroups.push({
-          subId: sub.id,
-          subTitle: sub.name,
-          rules: rulesList
-        });
+    const categories = await prisma.ruleCategory.findMany({
+      where: { category: 'refund' },
+      orderBy: { id: 'asc' },
+      include: {
+        subcategories: {
+          orderBy: { id: 'asc' },
+          include: {
+            rules: {
+              orderBy: { id: 'asc' },
+              include: {
+                subItems: {
+                  orderBy: { id: 'asc' }
+                }
+              }
+            }
+          }
+        },
+        footers: true
       }
+    });
 
-      // 5. ดึงหมายเหตุท้ายหน้า (Rule Footers)
-      const [footers] = await pool.query(
-        'SELECT note_text FROM rule_footers WHERE category_id = ? LIMIT 1',
-        [cat.id]
-      );
-
-      result.push({
+    const result = categories.map((cat) => {
+      const footer = cat.footers[0];
+      return {
         id: cat.id,
         title: cat.name,
         slug: cat.slug,
-        footerNote: footers.length > 0 ? footers[0].note_text : '',
-        subGroups: subGroups
-      });
-    }
+        footerNote: footer ? footer.noteText : '',
+        subGroups: cat.subcategories.map((sub) => ({
+          subId: sub.id,
+          subTitle: sub.name,
+          rules: sub.rules.map((rule) => ({
+            ruleId: rule.id,
+            text: rule.ruleText,
+            penaltyValue: rule.penaltyValue || '',
+            subItems: rule.subItems.map((si) => ({
+              subItemId: si.id,
+              text: si.content
+            }))
+          }))
+        }))
+      };
+    });
 
     return res.status(200).json(result);
   } catch (error) {
@@ -73,183 +58,171 @@ const getRefundPolicy = async (req, res) => {
 };
 
 const createRefundRule = async (req, res) => {
-  const connection = await pool.getConnection();
+  const { title, footer_note, subGroups } = req.body;
+  const categorySlug = generateSlug(title);
+
   try {
-    await connection.beginTransaction();
+    const existing = await prisma.ruleCategory.findFirst({
+      where: { category: 'refund', slug: categorySlug }
+    });
 
-    const { title, footer_note, subGroups } = req.body;
-
-    const generateSlug = (text) => {
-      return text.toLowerCase().replace(/&/g, 'and').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
-    };
-
-    const categorySlug = generateSlug(title);
-
-    // --- เช็กข้อมูลซ้ำก่อนบันทึก ป้องกัน Error 500 ---
-    const [existing] = await connection.query(
-      'SELECT id FROM rule_categories WHERE category = "refund" AND slug = ?', 
-      [categorySlug]
-    );
-    
-    if (existing.length > 0) {
-      await connection.rollback();
+    if (existing) {
       return res.status(400).json({ success: false, message: 'ชื่อหัวข้อ Refund Policy นี้มีอยู่แล้วในระบบ' });
     }
 
-    // 1. บันทึกหัวข้อหลัก
-    const [catResult] = await connection.query(
-      'INSERT INTO rule_categories (category, name, slug) VALUES (?, ?, ?)',
-      ['refund', title, categorySlug]
-    );
-    const categoryId = catResult.insertId;
+    // สร้างผ่าน Transaction เพื่อความปลอดภัยและรองรับการสร้างข้อมูลแบบผูกพัน
+    await prisma.$transaction(async (tx) => {
+      const newCategory = await tx.ruleCategory.create({
+        data: {
+          category: 'refund',
+          name: title,
+          slug: categorySlug,
+          footers: footer_note ? {
+            create: {
+              noteText: footer_note
+            }
+          } : undefined
+        }
+      });
 
-    // 2. วนลูปบันทึกย่อย
-    if (subGroups && subGroups.length > 0) {
-      for (const sg of subGroups) {
-        const subTitle = sg.subTitle || '';
-        const subSlug = generateSlug(subTitle);
+      if (subGroups && subGroups.length > 0) {
+        for (const sg of subGroups) {
+          const subTitle = sg.subTitle || '';
+          const subSlug = generateSlug(subTitle);
+          const rulesList = sg.rules || sg.items || [];
 
-        const [subResult] = await connection.query(
-          'INSERT INTO rule_subcategories (category_id, name, slug) VALUES (?, ?, ?)',
-          [categoryId, subTitle, subSlug]
-        );
-        const subcategoryId = subResult.insertId;
-
-        const rulesList = sg.rules || sg.items || [];
-        if (rulesList.length > 0) {
-          for (const item of rulesList) {
-            const penaltyValue = item.penaltyValue || item.penalty_value || null;
-
-            const [itemResult] = await connection.query(
-              'INSERT INTO rules (category_id, subcategory_id, rule_text, penalty_value) VALUES (?, ?, ?, ?)',
-              [categoryId, subcategoryId, item.text, penaltyValue]
-            );
-            const itemId = itemResult.insertId;
-
-            if (item.subItems && item.subItems.length > 0) {
-              for (const subItem of item.subItems) {
-                await connection.query(
-                  'INSERT INTO rule_sub_items (item_id, content) VALUES (?, ?)',
-                  [itemId, subItem.text]
-                );
+          await tx.ruleSubcategory.create({
+            data: {
+              categoryId: newCategory.id,
+              name: subTitle,
+              slug: subSlug,
+              rules: {
+                create: rulesList.map((item) => ({
+                  categoryId: newCategory.id, // <-- เพิ่ม categoryId ตรงนี้ให้ครบถ้วนตาม Schema
+                  ruleText: item.text,
+                  penaltyValue: item.penaltyValue || item.penalty_value || null,
+                  subItems: item.subItems && item.subItems.length > 0 ? {
+                    create: item.subItems.map((si) => ({
+                      content: si.text
+                    }))
+                  } : undefined
+                }))
               }
             }
-          }
+          });
         }
       }
-    }
+    });
 
-    // บันทึกหมายเหตุ
-    if (footer_note) {
-      await connection.query(
-        'INSERT INTO rule_footers (category_id, note_text) VALUES (?, ?)',
-        [categoryId, footer_note]
-      );
-    }
-
-    await connection.commit();
     return res.status(201).json({ success: true, message: 'บันทึกข้อมูลสำเร็จ' });
   } catch (error) {
-    await connection.rollback();
     console.error(error);
     return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
-  } finally {
-    connection.release();
   }
 };
 
-// ================= ฟังก์ชันอัปเดต (เรียกใช้ตอนกด Edit) =================
 const updateRefundRule = async (req, res) => {
-  const connection = await pool.getConnection();
+  const { id } = req.params;
+  const categoryId = Number(id);
+  const { title, footer_note, subGroups } = req.body;
+  const categorySlug = generateSlug(title);
+
   try {
-    await connection.beginTransaction();
+    const existing = await prisma.ruleCategory.findFirst({
+      where: { 
+        category: 'refund', 
+        slug: categorySlug, 
+        NOT: { id: categoryId } 
+      }
+    });
 
-    const { id } = req.params;
-    const { title, footer_note, subGroups } = req.body;
-
-    const generateSlug = (text) => text.toLowerCase().replace(/&/g, 'and').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-');
-    const categorySlug = generateSlug(title);
-
-    // เช็กว่าแก้ชื่อไปซ้ำกับหมวดอื่นที่มีอยู่แล้วหรือไม่ (ยกเว้นตัวเอง)
-    const [existing] = await connection.query(
-      'SELECT id FROM rule_categories WHERE category = "refund" AND slug = ? AND id != ?', 
-      [categorySlug, id]
-    );
-    if (existing.length > 0) {
-      await connection.rollback();
+    if (existing) {
       return res.status(400).json({ success: false, message: 'ชื่อหัวข้อนี้มีอยู่แล้ว โปรดใช้ชื่ออื่น' });
     }
 
-    // 1. อัปเดตหัวข้อหลัก
-    await connection.query(
-      'UPDATE rule_categories SET name = ?, slug = ? WHERE id = ? AND category = "refund"',
-      [title, categorySlug, id]
-    );
+    const currentCat = await prisma.ruleCategory.findUnique({
+      where: { id: categoryId }
+    });
 
-    // 2. เคลียร์ข้อมูลลูกเก่าทิ้ง
-    await connection.query('DELETE FROM rule_subcategories WHERE category_id = ?', [id]);
-    await connection.query('DELETE FROM rules WHERE category_id = ?', [id]);
-    await connection.query('DELETE FROM rule_footers WHERE category_id = ?', [id]);
+    if (!currentCat) {
+      return res.status(404).json({ success: false, message: 'ไม่พบข้อมูลที่ต้องการแก้ไข' });
+    }
 
-    // 3. วนลูปบันทึกข้อมูลลูกใหม่เข้าไป
-    if (subGroups && subGroups.length > 0) {
-      for (const sg of subGroups) {
-        const subTitle = sg.subTitle || '';
-        const subSlug = generateSlug(subTitle);
+    await prisma.$transaction(async (tx) => {
+      // 1. อัปเดตหัวข้อหลัก
+      await tx.ruleCategory.update({
+        where: { id: categoryId },
+        data: { name: title, slug: categorySlug }
+      });
 
-        const [subResult] = await connection.query(
-          'INSERT INTO rule_subcategories (category_id, name, slug) VALUES (?, ?, ?)',
-          [id, subTitle, subSlug]
-        );
-        const subcategoryId = subResult.insertId;
+      // 2. เคลียร์ข้อมูลลูกเก่า
+      await tx.ruleFooter.deleteMany({ where: { categoryId } });
+      await tx.ruleSubcategory.deleteMany({ where: { categoryId } });
+      await tx.rule.deleteMany({ where: { categoryId } });
 
-        const rulesList = sg.rules || sg.items || [];
-        if (rulesList.length > 0) {
-          for (const item of rulesList) {
-            const penaltyValue = item.penaltyValue || item.penalty_value || null;
-            const [itemResult] = await connection.query(
-              'INSERT INTO rules (category_id, subcategory_id, rule_text, penalty_value) VALUES (?, ?, ?, ?)',
-              [id, subcategoryId, item.text, penaltyValue]
-            );
-            const itemId = itemResult.insertId;
+      // 3. สร้างข้อมูลลูกใหม่
+      if (subGroups && subGroups.length > 0) {
+        for (const sg of subGroups) {
+          const subTitle = sg.subTitle || '';
+          const subSlug = generateSlug(subTitle);
+          const rulesList = sg.rules || sg.items || [];
 
-            if (item.subItems && item.subItems.length > 0) {
-              for (const subItem of item.subItems) {
-                await connection.query(
-                  'INSERT INTO rule_sub_items (item_id, content) VALUES (?, ?)',
-                  [itemId, subItem.text]
-                );
+          await tx.ruleSubcategory.create({
+            data: {
+              categoryId: categoryId,
+              name: subTitle,
+              slug: subSlug,
+              rules: {
+                create: rulesList.map((item) => ({
+                  categoryId: categoryId,
+                  ruleText: item.text,
+                  penaltyValue: item.penaltyValue || item.penalty_value || null,
+                  subItems: item.subItems && item.subItems.length > 0 ? {
+                    create: item.subItems.map((si) => ({
+                      content: si.text
+                    }))
+                  } : undefined
+                }))
               }
             }
-          }
+          });
         }
       }
-    }
 
-    if (footer_note) {
-      await connection.query('INSERT INTO rule_footers (category_id, note_text) VALUES (?, ?)', [id, footer_note]);
-    }
+      // 4. สร้างหมายเหตุใหม่ถ้ามี
+      if (footer_note) {
+        await tx.ruleFooter.create({
+          data: {
+            categoryId: categoryId,
+            noteText: footer_note
+          }
+        });
+      }
+    });
 
-    await connection.commit();
     return res.status(200).json({ success: true, message: 'อัปเดตข้อมูลสำเร็จ' });
   } catch (error) {
-    await connection.rollback();
     console.error(error);
     return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล' });
-  } finally {
-    connection.release();
   }
 };
 
-// ================= ฟังก์ชันลบ (เรียกใช้ตอนกด Delete) =================
 const deleteRefundRule = async (req, res) => {
   try {
     const { id } = req.params;
-    const [result] = await pool.query('DELETE FROM rule_categories WHERE id = ? AND category = "refund"', [id]);
-    
-    if (result.affectedRows === 0) {
+    const categoryId = Number(id);
+
+    const cat = await prisma.ruleCategory.findFirst({
+      where: { id: categoryId, category: 'refund' }
+    });
+
+    if (!cat) {
       return res.status(404).json({ success: false, message: 'ไม่พบข้อมูลที่ต้องการลบ' });
     }
+
+    await prisma.ruleCategory.delete({
+      where: { id: categoryId }
+    });
 
     return res.status(200).json({ success: true, message: 'ลบข้อมูลสำเร็จ' });
   } catch (error) {

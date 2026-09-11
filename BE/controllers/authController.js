@@ -1,4 +1,4 @@
-const db = require('../config/db');
+const prisma = require('../config/prisma');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -13,14 +13,18 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const userRole = role === 'admin' ? 'admin' : 'user';
 
-    await db.query(
-      'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
-      [username, email, hashedPassword, userRole]
-    );
+    await prisma.user.create({
+      data: {
+        username,
+        email,
+        password: hashedPassword,
+        role: userRole
+      }
+    });
 
     res.status(201).json({ message: 'สมัครสมาชิกสำเร็จ' });
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') {
+    if (err.code === 'P2002') {
       return res.status(400).json({ message: 'Username หรือ Email นี้ถูกใช้งานแล้ว' });
     }
     res.status(500).json({ message: 'เกิดข้อผิดพลาดในการสมัครสมาชิก', error: err.message });
@@ -36,16 +40,19 @@ exports.login = async (req, res) => {
 
   try {
     // ค้นหาได้ทั้ง Username และ Email
-    const [rows] = await db.query(
-      'SELECT * FROM users WHERE username = ? OR email = ?',
-      [username, username]
-    );
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: username },
+          { email: username }
+        ]
+      }
+    });
 
-    if (rows.length === 0) {
+    if (!user) {
       return res.status(404).json({ message: 'ไม่พบผู้ใช้นี้' });
     }
 
-    const user = rows[0];
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'รหัสผ่านไม่ถูกต้อง' });

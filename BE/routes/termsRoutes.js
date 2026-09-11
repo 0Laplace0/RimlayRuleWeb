@@ -9,9 +9,11 @@ const {
 
 router.get('/terms', getTermsAndConditions);
 router.get('/terms-and-conditions', getTermsAndConditions);
-router.post('/terms-and-conditions', createTermRule);
-router.post('/terms-and-conditions/create', createTermRule);
-router.put('/terms-and-conditions/update/:id', updateTermRule);
-router.delete('/terms-and-conditions/delete/:id', deleteTermRule);
+
+router.post('/terms', createTermRule);
+router.post('/terms/create', createTermRule);
+
+router.put('/terms/update/:id', updateTermRule);
+router.delete('/terms/delete/:id', deleteTermRule);
 
 module.exports = router;

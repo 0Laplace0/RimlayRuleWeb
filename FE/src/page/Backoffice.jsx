@@ -4,16 +4,18 @@ import { swalUtils } from '@/utils/swalUtils.js';
 
 import ActivityRulesCRUD from '@/components/backoffice/ActivityRulesCRUD';
 import CountryRulesCRUD from '@/components/backoffice/CountryRulesCRUD';
+import RoleplayRulesCRUD from '@/components/backoffice/RoleplayRulesCRUD';
 import TermsRulesCRUD from '@/components/backoffice/TermsRulesCRUD';
 import RefundRulesCRUD from '@/components/backoffice/RefundRulesCRUD';
 import ActivityLog from '@/components/backoffice/ActivityLog';
 
 const Backoffice = () => {
-  const [activeMenu, setActiveMenu] = useState('RefundRules');
+  const [activeMenu, setActiveMenu] = useState('RoleplayRules');
 
   const sidebarMenus = [
     { id: 'CountryRules', name: '- จัดการกฎประเทศ -' },
     { id: 'ActivityRules', name: '- จัดการกฎกิจกรรม -' },
+    { id: 'RoleplayRules', name: '- จัดการกฎ Roleplay -' },
     { id: 'TermsRules', name: '- จัดการ Terms & Conditions -' },
     { id: 'RefundRules', name: '- จัดการ Refund Policy -' },
     { id: 'ActivityLog', name: '- Realtime Activity Log -' },
@@ -44,6 +46,8 @@ const Backoffice = () => {
         return <CountryRulesCRUD />;
       case 'ActivityRules':
         return <ActivityRulesCRUD />;
+      case 'RoleplayRules':
+        return <RoleplayRulesCRUD />;
       case 'TermsRules':
         return <TermsRulesCRUD />;
       case 'RefundRules':
@@ -65,7 +69,7 @@ const Backoffice = () => {
 
       <div className="flex-1 w-full max-w-full px-6 py-8 flex flex-col lg:flex-row gap-6">
         
-        {/* SIDEBAR (ปรับสีเปลี่ยนจากเขียวให้ตรงกับหน้า Content) */}
+        {/* SIDEBAR */}
         <aside className="w-full lg:w-64 shrink-0">
           <div className="bg-[#0f172a]/90 border border-indigo-950/60 rounded-xl overflow-hidden shadow-2xl">
             <div className="bg-[#1e293b]/70 border-b border-indigo-950/60 px-4 py-3 text-center">
@@ -98,7 +102,7 @@ const Backoffice = () => {
           </div>
         </aside>
 
-        {/* CONTENT AREA (คงสีและโครงสร้างเดิมในกรอบสีแดงไว้ทั้งหมด) */}
+        {/* CONTENT AREA */}
         <main className="flex-1 bg-[#0b0e17] border border-indigo-950/60 rounded-xl p-6 md:p-8 shadow-2xl min-h-[600px] overflow-hidden">
           {renderContent()}
         </main>

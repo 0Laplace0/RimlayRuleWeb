@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Users Schema
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique @db.VarChar(50)
+  email     String   @unique @db.VarChar(100)
+  password  String   @db.VarChar(255)
+  role      UserRole @default(user)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+enum UserRole {
+  admin
+  user
+}
+
+// 2. ตารางหมวดหมู่หลัก (rule_categories)
+// ใช้ String เพื่อรองรับหมวดหมู่ใหม่ๆ ที่อาจเพิ่มขึ้นในอนาคตได้อย่างอิสระ
+model RuleCategory {
+  id        Int      @id @default(autoincrement())
+  category  String   @default("activity") @db.VarChar(50)
+  name      String   @db.VarChar(255)
+  slug      String   @db.VarChar(255)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  subcategories RuleSubcategory[]
+  rules         Rule[]
+  footers       RuleFooter[]
+
+  @@unique([category, slug], map: "unique_category_slug")
+  @@map("rule_categories")
+}
+
+// 3. ตารางหมวดหมู่ย่อย (rule_subcategories)
+model RuleSubcategory {
+  id         Int      @id @default(autoincrement())
+  categoryId Int      @map("category_id")
+  name       String   @db.VarChar(255)
+  slug       String   @db.VarChar(255)
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at")
+
+  category RuleCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  rules    Rule[]
+  footers  RuleFooter[]
+
+  @@unique([categoryId, slug], map: "unique_subcategory_slug")
+  @@map("rule_subcategories")
+}
+
+// 4. ตารางรายการกฎข้อบังคับ (rules)
+model Rule {
+  id            Int      @id @default(autoincrement())
+  categoryId    Int      @map("category_id")
+  subcategoryId Int?     @map("subcategory_id")
+  title         String?  @db.VarChar(255)
+  ruleText      Json     @map("rule_text")
+  penaltyValue  String?  @map("penalty_value") @db.VarChar(255)
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  category    RuleCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategory RuleSubcategory? @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+  subItems    RuleSubItem[]
+
+  @@map("rules")
+}
+
+// 5. ตารางหมายเหตุท้ายหมวดหมู่ (rule_footers)
+model RuleFooter {
+  id            Int      @id @default(autoincrement())
+  categoryId    Int      @map("category_id")
+  subcategoryId Int?     @map("subcategory_id")
+  noteText      Json     @map("note_text")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  category    RuleCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  subcategory RuleSubcategory? @relation(fields: [subcategoryId], references: [id], onDelete: Cascade)
+
+  @@map("rule_footers")
+}
+
+// 6. ตารางข้อย่อยของกฎ (rule_sub_items)
+model RuleSubItem {
+  id        Int      @id @default(autoincrement())
+  itemId    Int      @map("item_id")
+  content   Json
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  rule Rule @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("rule_sub_items")
+}

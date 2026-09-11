@@ -1,0 +1,34 @@
+# OS generated files & IDEs
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# --- Frontend (FE) ---
+FE/node_modules/
+FE/dist/
+FE/build/
+FE/.next/
+FE/.vite/
+FE/npm-debug.log*
+FE/yarn-debug.log*
+FE/yarn-error.log*
+FE/pnpm-debug.log*
+FE/.env
+FE/.env.local
+
+# --- Backend (BE) ---
+# กรณีใช้ Python (Flask, FastAPI, Django ฯลฯ)
+BE/venv/
+BE/env/
+BE/__pycache__/
+BE/*.py[cod]
+BE/*.sqlite3
+
+# กรณีใช้ Node.js / Express สำหรับ Backend
+BE/node_modules/
+BE/logs/
+
+# ค่าความลับและตัวแปรสภาพแวดล้อม
+BE/.env
+BE/.env.local

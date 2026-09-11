@@ -1,47 +1,47 @@
-const db = require('../config/db');
+const prisma = require('../config/prisma');
 
 // [READ ALL] ดึงข้อมูลเฉพาะหมวด activity สำหรับหน้าตารางจัดการ
 exports.getAllRules = async (req, res) => {
   try {
-    const [categories] = await db.query(
-      'SELECT * FROM rule_categories WHERE category = ? ORDER BY id ASC', 
-      ['activity']
-    );
-    
-    const fullData = await Promise.all(categories.map(async (cat) => {
-      const [subcategories] = await db.query(
-        'SELECT * FROM rule_subcategories WHERE category_id = ? ORDER BY sort_order ASC, id ASC',
-        [cat.id]
-      );
+    const categories = await prisma.ruleCategory.findMany({
+      where: { category: 'activity' },
+      orderBy: { id: 'asc' },
+      include: {
+        subcategories: {
+          orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+          include: {
+            rules: {
+              orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }]
+            }
+          }
+        },
+        footers: true
+      }
+    });
 
-      const subGroups = await Promise.all(subcategories.map(async (sub) => {
-        const [rules] = await db.query(
-          'SELECT * FROM rules WHERE subcategory_id = ? ORDER BY sort_order ASC, id ASC',
-          [sub.id]
-        );
-        return {
-          id: sub.id,
-          subTitle: sub.name,
-          rules: rules.map(r => ({
-            id: r.id,
-            title: r.title,
-            text: r.rule_text,
-            penaltyValue: r.penalty_value
-          }))
-        };
+    const fullData = categories.map((cat) => {
+      const subGroups = cat.subcategories.map((sub) => ({
+        id: sub.id,
+        subTitle: sub.name,
+        rules: sub.rules.map((r) => ({
+          id: r.id,
+          title: r.title,
+          text: r.ruleText,
+          penaltyValue: r.penaltyValue
+        }))
       }));
 
-      const [footers] = await db.query('SELECT * FROM rule_footers WHERE category_id = ?', [cat.id]);
+      const footer = cat.footers[0];
 
       return {
         id: cat.id,
         category: cat.category,
         title: cat.name,
         slug: cat.slug,
-        footerNote: footers.length > 0 ? footers[0].note_text : '',
+        footerNote: footer ? footer.noteText : '',
         subGroups: subGroups
       };
-    }));
+    });
 
     res.json(fullData);
   } catch (err) {
@@ -52,62 +52,66 @@ exports.getAllRules = async (req, res) => {
 // [CREATE FULL] เพิ่มข้อมูลกิจกรรมแบบครบชุดในครั้งเดียว (ล็อก category เป็น activity)
 exports.createFullRule = async (req, res) => {
   const { title, footerNote, subGroups } = req.body;
-  const ruleCategory = 'activity'; // ล็อกค่าเป็น activity
+  const ruleCategory = 'activity';
 
-  let connection;
   try {
-    connection = await db.getConnection();
-    await connection.beginTransaction();
+    const baseSlug = title ? title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : 'activity';
+    const slug = `${baseSlug}-${Date.now().toString(36)}`;
 
-    const slug = title ? title.toLowerCase().trim().replace(/\s+/g, '-') : '';
+    const newCategory = await prisma.$transaction(async (tx) => {
+      const createdCat = await tx.ruleCategory.create({
+        data: {
+          category: ruleCategory,
+          name: title,
+          slug: slug,
+          footers: footerNote ? {
+            create: {
+              noteText: footerNote
+            }
+          } : undefined
+        }
+      });
 
-    const [catResult] = await connection.query(
-      'INSERT INTO rule_categories (category, name, slug) VALUES (?, ?, ?)',
-      [ruleCategory, title, slug]
-    );
-    const categoryId = catResult.insertId;
+      if (subGroups && subGroups.length > 0) {
+        for (const [subIndex, sub] of subGroups.entries()) {
+          const subTitleName = sub.subTitle || sub.sub_title || '';
+          const cleanSubName = subTitleName 
+            ? subTitleName.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') 
+            : 'sub';
+          // ป้องกัน Slug ซ้ำด้วยการพ่วง subIndex และสุ่มรหัสท้าย
+          const subSlug = `${cleanSubName}-${subIndex}-${Math.random().toString(36).substring(2, 7)}`;
+          const rulesList = sub.rules || sub.items || [];
 
-    if (subGroups && subGroups.length > 0) {
-      for (const [subIndex, sub] of subGroups.entries()) {
-        const subTitleName = sub.subTitle || sub.sub_title || '';
-        const subSlug = subTitleName ? subTitleName.toLowerCase().trim().replace(/\s+/g, '-') : `sub-${Date.now()}-${subIndex}`;
-
-        const [subResult] = await connection.query(
-          'INSERT INTO rule_subcategories (category_id, name, slug, sort_order) VALUES (?, ?, ?, ?)',
-          [categoryId, subTitleName, subSlug, subIndex]
-        );
-        const subcategoryId = subResult.insertId;
-
-        const rulesList = sub.rules || sub.items || [];
-        if (rulesList.length > 0) {
-          for (const [ruleIndex, rule] of rulesList.entries()) {
-            await connection.query(
-              'INSERT INTO rules (category_id, subcategory_id, title, rule_text, penalty_value, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-              [categoryId, subcategoryId, rule.title || null, rule.text, rule.penaltyValue || rule.penalty_value || null, ruleIndex]
-            );
-          }
+          await tx.ruleSubcategory.create({
+            data: {
+              categoryId: createdCat.id,
+              name: subTitleName,
+              slug: subSlug,
+              sortOrder: subIndex,
+              rules: {
+                create: rulesList.map((rule, ruleIndex) => ({
+                  categoryId: createdCat.id,
+                  title: rule.title || null,
+                  ruleText: rule.text || '',
+                  penaltyValue: rule.penaltyValue || rule.penalty_value || null,
+                  sortOrder: ruleIndex
+                }))
+              }
+            }
+          });
         }
       }
-    }
 
-    if (footerNote) {
-      await connection.query(
-        'INSERT INTO rule_footers (category_id, note_text) VALUES (?, ?)',
-        [categoryId, footerNote]
-      );
-    }
+      return createdCat;
+    });
 
-    await connection.commit();
-    res.status(201).json({ message: 'เพิ่มข้อมูลกิจกรรมสำเร็จ', id: categoryId });
+    res.status(201).json({ message: 'เพิ่มข้อมูลกิจกรรมสำเร็จ', id: newCategory.id });
   } catch (err) {
-    if (connection) await connection.rollback();
     console.error("CREATE ERROR DETAILED:", err);
-    if (err.code === 'ER_DUP_ENTRY') {
-      return res.status(400).json({ error: 'ชื่อหัวข้อนี้มีอยู่แล้วในหมวดหมู่เดียวกัน กรุณาเปลี่ยนชื่อใหม่' });
+    if (err.code === 'P2002') {
+      return res.status(400).json({ error: 'ชื่อหัวข้อนี้หรือหมวดหมู่ย่อยซ้ำกับในระบบ กรุณาตรวจสอบข้อมูล' });
     }
     res.status(500).json({ error: err.message });
-  } finally {
-    if (connection) connection.release();
   }
 };
 
@@ -115,99 +119,104 @@ exports.createFullRule = async (req, res) => {
 exports.updateFullRule = async (req, res) => {
   const { id } = req.params;
   const { title, footerNote, subGroups } = req.body;
-  let connection;
+  const categoryId = Number(id);
+
   try {
-    connection = await db.getConnection();
-    await connection.beginTransaction();
+    const currentCat = await prisma.ruleCategory.findUnique({
+      where: { id: categoryId }
+    });
 
-    const slug = title ? title.toLowerCase().trim().replace(/\s+/g, '-') : undefined;
-
-    if (title) {
-      const [currentCat] = await connection.query('SELECT * FROM rule_categories WHERE id = ?', [id]);
-      if (currentCat.length === 0) {
-        await connection.rollback();
-        return res.status(404).json({ error: 'ไม่พบข้อมูลที่ต้องการแก้ไข' });
-      }
-
-      const newTitle = title || currentCat[0].name;
-      const newSlug = slug || currentCat[0].slug;
-
-      await connection.query(
-        'UPDATE rule_categories SET category = ?, name = ?, slug = ? WHERE id = ?',
-        ['activity', newTitle, newSlug, id]
-      );
+    if (!currentCat) {
+      return res.status(404).json({ error: 'ไม่พบข้อมูลที่ต้องการแก้ไข' });
     }
 
-    const [oldSubs] = await connection.query('SELECT id FROM rule_subcategories WHERE category_id = ?', [id]);
-    for (const sub of oldSubs) {
-      await connection.query('DELETE FROM rules WHERE subcategory_id = ?', [sub.id]);
-    }
-    await connection.query('DELETE FROM rule_subcategories WHERE category_id = ?', [id]);
+    const newTitle = title || currentCat.name;
+    const baseSlug = newTitle ? newTitle.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : currentCat.slug;
+    const slug = `${baseSlug}-${categoryId}`;
 
-    if (subGroups && subGroups.length > 0) {
-      for (const [subIndex, sub] of subGroups.entries()) {
-        const subTitleName = sub.subTitle || sub.sub_title || '';
-        const subSlug = subTitleName ? subTitleName.toLowerCase().trim().replace(/\s+/g, '-') : `sub-${Date.now()}-${subIndex}`;
+    await prisma.$transaction(async (tx) => {
+      // 1. อัปเดตข้อมูลหัวข้อหลัก
+      await tx.ruleCategory.update({
+        where: { id: categoryId },
+        data: {
+          category: 'activity',
+          name: newTitle,
+          slug: slug
+        }
+      });
 
-        const [subResult] = await connection.query(
-          'INSERT INTO rule_subcategories (category_id, name, slug, sort_order) VALUES (?, ?, ?, ?)',
-          [id, subTitleName, subSlug, subIndex]
-        );
-        const subcategoryId = subResult.insertId;
+      // 2. ลบ Footer และ Subcategories เก่า (ระบบ Cascade จะลบ Rules ให้อัตโนมัติ)
+      await tx.ruleFooter.deleteMany({
+        where: { categoryId: categoryId }
+      });
 
-        const rulesList = sub.rules || sub.items || [];
-        if (rulesList.length > 0) {
-          for (const [ruleIndex, rule] of rulesList.entries()) {
-            await connection.query(
-              'INSERT INTO rules (category_id, subcategory_id, title, rule_text, penalty_value, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
-              [id, subcategoryId, rule.title || null, rule.text, rule.penaltyValue || rule.penalty_value || null, ruleIndex]
-            );
-          }
+      await tx.ruleSubcategory.deleteMany({
+        where: { categoryId: categoryId }
+      });
+
+      // 3. สร้าง Subcategories และ Rules ใหม่ทั้งหมดพร้อมระบุ categoryId และป้องกัน Slug ซ้ำ
+      if (subGroups && subGroups.length > 0) {
+        for (const [subIndex, sub] of subGroups.entries()) {
+          const subTitleName = sub.subTitle || sub.sub_title || '';
+          const cleanSubName = subTitleName 
+            ? subTitleName.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') 
+            : 'sub';
+          const subSlug = `${cleanSubName}-${categoryId}-${subIndex}-${Math.random().toString(36).substring(2, 7)}`;
+          const rulesList = sub.rules || sub.items || [];
+
+          await tx.ruleSubcategory.create({
+            data: {
+              categoryId: categoryId,
+              name: subTitleName,
+              slug: subSlug,
+              sortOrder: subIndex,
+              rules: {
+                create: rulesList.map((rule, ruleIndex) => ({
+                  categoryId: categoryId,
+                  title: rule.title || null,
+                  ruleText: rule.text || '',
+                  penaltyValue: rule.penaltyValue || rule.penalty_value || null,
+                  sortOrder: ruleIndex
+                }))
+              }
+            }
+          });
         }
       }
-    }
 
-    await connection.query('DELETE FROM rule_footers WHERE category_id = ?', [id]);
-    if (footerNote) {
-      await connection.query(
-        'INSERT INTO rule_footers (category_id, note_text) VALUES (?, ?)',
-        [id, footerNote]
-      );
-    }
+      // 4. สร้าง Footer ใหม่ถ้ามี
+      if (footerNote) {
+        await tx.ruleFooter.create({
+          data: {
+            categoryId: categoryId,
+            noteText: footerNote
+          }
+        });
+      }
+    });
 
-    await connection.commit();
     res.json({ message: 'อัปเดตข้อมูลกิจกรรมสำเร็จ' });
   } catch (err) {
-    if (connection) await connection.rollback();
     console.error("UPDATE ERROR DETAILED:", err);
+    if (err.code === 'P2002') {
+      return res.status(400).json({ error: 'ชื่อหัวข้อนี้หรือหมวดหมู่ย่อยซ้ำกับในระบบ กรุณาตรวจสอบข้อมูล' });
+    }
     res.status(500).json({ error: err.message });
-  } finally {
-    if (connection) connection.release();
   }
 };
 
 // [DELETE MAIN] ลบหัวข้อหลักของกิจกรรม (รวมถึง Subgroups และ Rules ที่ผูกอยู่)
 exports.deleteMainRule = async (req, res) => {
   const { id } = req.params;
-  let connection;
+  const categoryId = Number(id);
+
   try {
-    connection = await db.getConnection();
-    await connection.beginTransaction();
+    await prisma.ruleCategory.delete({
+      where: { id: categoryId }
+    });
 
-    const [subs] = await connection.query('SELECT id FROM rule_subcategories WHERE category_id = ?', [id]);
-    for (const sub of subs) {
-      await connection.query('DELETE FROM rules WHERE subcategory_id = ?', [sub.id]);
-    }
-    await connection.query('DELETE FROM rule_subcategories WHERE category_id = ?', [id]);
-    await connection.query('DELETE FROM rule_footers WHERE category_id = ?', [id]);
-    await connection.query('DELETE FROM rule_categories WHERE id = ?', [id]);
-
-    await connection.commit();
     res.json({ message: 'ลบหัวข้อกิจกรรมสำเร็จ' });
   } catch (err) {
-    if (connection) await connection.rollback();
     res.status(500).json({ error: err.message });
-  } finally {
-    if (connection) connection.release();
   }
 };
