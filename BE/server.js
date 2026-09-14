@@ -13,6 +13,7 @@ const countryRuleRoutes = require('./routes/countryRuleRoutes');
 const termsRoutes = require('./routes/termsRoutes');
 const refundRoutes = require('./routes/refundRoutes');
 const roleplayRuleRoutes = require('./routes/roleplayRuleRoutes');
+const streamingPolicyRoutes = require('./routes/streamingPolicyRoutes');
 
 // Use Routes
 app.use('/api/auth', authRoutes);
@@ -21,6 +22,7 @@ app.use('/api', countryRuleRoutes);
 app.use('/api', termsRoutes);
 app.use('/api', refundRoutes);
 app.use('/api', roleplayRuleRoutes);
+app.use('/api', streamingPolicyRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
