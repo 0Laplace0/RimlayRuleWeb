@@ -85,93 +85,80 @@ export default function RoleplayRules() {
         {/* ตรวจสอบว่ามีข้อมูลหรือไม่ */}
         {rulesData.length > 0 ? (
           rulesData.map((category) => (
-            <div key={category.id} className="mb-12 bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden">
+            <div key={category.id} className="mb-12 bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden p-6">
               
-              {/* หัวข้อหมวดหมู่ใหญ่ */}
-              <div className="bg-gray-900 px-6 py-4">
-                <h2 className="text-xl font-bold text-white">
-                  {category.title}
-                </h2>
-              </div>
+              {/* ตารางเดียวรวมทุกข้อย่อย */}
+              <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                <table className="min-w-full divide-y divide-gray-200 bg-white">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/4">
+                        กฎ
+                      </th>
+                      <th scope="col" className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/2">
+                        รายละเอียด
+                      </th>
+                      <th scope="col" className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/4">
+                        บทลงโทษ
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {category.subGroups && category.subGroups.length > 0 ? (
+                      category.subGroups.flatMap((sub) => 
+                        sub.rules && sub.rules.length > 0 
+                          ? sub.rules.map((rule, ruleIdx) => ({
+                              ...rule,
+                              subTitle: sub.subTitle,
+                              uniqueKey: `${sub.subId}-${rule.ruleId || ruleIdx}`
+                            }))
+                          : []
+                      ).map((item) => (
+                        <tr key={item.uniqueKey} className="hover:bg-gray-50/75 transition-colors">
+                          
+                          {/* คอลัมน์ที่ 1: กฎ (ชื่อหมวดหมู่ย่อย) */}
+                          <td className="px-6 py-4 text-sm font-semibold text-gray-900 align-top">
+                            {item.subTitle || `-`}
+                          </td>
 
-              <div className="p-6 space-y-8">
-                {category.subGroups && category.subGroups.length > 0 ? (
-                  category.subGroups.map((sub, subIdx) => (
-                    <div key={sub.subId || subIdx} className="space-y-4">
-                      
-                      {/* ชื่อหมวดหมู่ย่อย (ถ้ามี) */}
-                      {sub.subTitle && (
-                        <h3 className="text-lg font-semibold text-indigo-600 border-l-4 border-indigo-600 pl-3">
-                          {sub.subTitle}
-                        </h3>
-                      )}
-
-                      {/* ตารางแสดงกฎย่อย */}
-                      <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                        <table className="min-w-full divide-y divide-gray-200 bg-white">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th scope="col" className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-3/5">
-                                รายละเอียดข้อบังคับ / กฎ
-                              </th>
-                              <th scope="col" className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-2/5">
-                                บทลงโทษ
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {sub.rules && sub.rules.length > 0 ? (
-                              sub.rules.map((rule, ruleIdx) => (
-                                <tr key={rule.ruleId || ruleIdx} className="hover:bg-gray-50/75 transition-colors">
-                                  
-                                  {/* คอลัมน์ รายละเอียดกฎ + ข้อย่อย (subItems ถ้ามี) */}
-                                  <td className="px-6 py-4 text-sm text-gray-800 align-top leading-relaxed">
-                                    <div className="whitespace-pre-line">{rule.text}</div>
-                                    
-                                    {/* แสดงข้อย่อยย่อยลงไปอีก (ถ้ามี subItems) */}
-                                    {rule.subItems && rule.subItems.length > 0 && (
-                                      <ul className="mt-2 pl-5 list-disc space-y-1 text-gray-600 text-xs">
-                                        {rule.subItems.map((si, siIdx) => (
-                                          <li key={si.subItemId || siIdx}>{si.text}</li>
-                                        ))}
-                                      </ul>
-                                    )}
-                                  </td>
-
-                                  {/* คอลัมน์ บทลงโทษ */}
-                                  <td className="px-6 py-4 text-sm align-top">
-                                    {renderPenalty(rule.penaltyValue)}
-                                  </td>
-
-                                </tr>
-                              ))
-                            ) : (
-                              <tr>
-                                <td colSpan="2" className="px-6 py-6 text-center text-gray-400 text-sm">
-                                  ไม่มีข้อมูลกฎในหมวดหมู่นี้
-                                </td>
-                              </tr>
+                          {/* คอลัมน์ที่ 2: รายละเอียดกฎ + ข้อย่อย */}
+                          <td className="px-6 py-4 text-sm text-gray-600 align-top leading-relaxed">
+                            <div className="whitespace-pre-line">{item.text}</div>
+                            
+                            {item.subItems && item.subItems.length > 0 && (
+                              <ul className="mt-2 pl-5 list-disc space-y-1 text-gray-500 text-xs">
+                                {item.subItems.map((si, siIdx) => (
+                                  <li key={si.subItemId || siIdx}>{si.text}</li>
+                                ))}
+                              </ul>
                             )}
-                          </tbody>
-                        </table>
-                      </div>
+                          </td>
 
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6 text-gray-400 text-sm">
-                    ไม่มีหมวดหมู่ย่อยในหัวข้อนี้
-                  </div>
-                )}
+                          {/* คอลัมน์ที่ 3: บทลงโทษ */}
+                          <td className="px-6 py-4 text-sm align-top">
+                            {renderPenalty(item.penaltyValue)}
+                          </td>
 
-                {/* ส่วนหมายเหตุท้าย (Footer Note) ถ้ามี */}
-                {category.footerNote && (
-                  <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-sm">
-                    <span className="font-semibold">หมายเหตุ: </span> {category.footerNote}
-                  </div>
-                )}
-
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="3" className="px-6 py-6 text-center text-gray-400 text-sm">
+                          ไม่มีข้อมูลกฎในหมวดหมู่นี้
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
+
+              {/* ส่วนหมายเหตุท้าย (Footer Note) ถ้ามี */}
+              {category.footerNote && (
+                <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-sm">
+                  <span className="font-semibold">หมายเหตุ: </span> {category.footerNote}
+                </div>
+              )}
+
             </div>
           ))
         ) : (
