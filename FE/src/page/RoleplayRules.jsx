@@ -22,40 +22,50 @@ export default function RoleplayRules() {
     }
   };
 
-  // ฟังก์ชันช่วยจัดรูปแบบบทลงโทษ (Badge สีต่างๆ)
-  const renderPenalty = (penaltyText) => {
+  // ฟังก์ชันช่วยจัดรูปแบบบทลงโทษ
+  const renderPenaltyBadge = (penaltyText) => {
     if (!penaltyText) return <span className="text-gray-400">-</span>;
 
+    const words = penaltyText.split(' ');
+
     return (
-      <div className="flex flex-wrap gap-1.5 items-center">
-        {penaltyText.split(',').map((item, idx) => {
-          const text = item.trim();
-          if (text.includes('ใบเหลือง')) {
+      <div className="flex flex-wrap items-center gap-1.5">
+        {words.map((word, idx) => {
+          if (!word) return null;
+
+          if (word.includes('ปรับ')) {
             return (
-              <span key={idx} className="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-md border border-amber-200">
-                {text}
-              </span>
-            );
-          } else if (text.includes('ใบส้ม')) {
-            return (
-              <span key={idx} className="px-2.5 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded-md border border-orange-200">
-                {text}
-              </span>
-            );
-          } else if (text.includes('ใบแดง')) {
-            return (
-              <span key={idx} className="px-2.5 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-md border border-red-200">
-                {text}
-              </span>
-            );
-          } else if (text.includes('ปรับ')) {
-            return (
-              <span key={idx} className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-md border border-emerald-200">
-                {text}
+              <span key={idx} className="px-2.5 py-1 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-md text-xs font-bold shadow-sm">
+                {word}
               </span>
             );
           }
-          return <span key={idx} className="text-gray-700 text-sm">{text}</span>;
+          if (word.includes('ใบเหลือง')) {
+            return (
+              <span key={idx} className="px-2.5 py-1 bg-amber-100 border border-amber-300 text-amber-800 rounded-md text-xs font-bold shadow-sm">
+                {word}
+              </span>
+            );
+          }
+          if (word.includes('ใบส้ม')) {
+            return (
+              <span key={idx} className="px-2.5 py-1 bg-orange-100 border border-orange-300 text-orange-800 rounded-md text-xs font-bold shadow-sm">
+                {word}
+              </span>
+            );
+          }
+          if (word.includes('ใบแดงถาวร') || word.includes('ใบแดง')) {
+            return (
+              <span key={idx} className="px-2.5 py-1 bg-red-100 border border-red-300 text-red-800 rounded-md text-xs font-bold shadow-sm">
+                {word}
+              </span>
+            );
+          }
+          if (word === 'หรือ') {
+            return <span key={idx} className="text-gray-500 font-semibold text-xs mx-1">หรือ</span>;
+          }
+
+          return <span key={idx} className="text-gray-700 text-xs">{word}</span>;
         })}
       </div>
     );
@@ -85,25 +95,25 @@ export default function RoleplayRules() {
         {/* ตรวจสอบว่ามีข้อมูลหรือไม่ */}
         {rulesData.length > 0 ? (
           rulesData.map((category) => (
-            <div key={category.id} className="mb-12 bg-white shadow-sm border border-gray-200 rounded-xl overflow-hidden p-6">
+            <div key={category.id} className="mb-12">
               
-              {/* ตารางเดียวรวมทุกข้อย่อย */}
-              <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200 bg-white">
-                  <thead className="bg-gray-50">
+              {/* ตาราง 3 ช่อง (เพิ่มกรอบและเส้นขอบตารางครบถ้วนทั้งแนวตั้งและแนวนอน) */}
+              <div className="overflow-x-auto border border-gray-300 rounded-lg bg-white shadow-sm">
+                <table className="min-w-full border-collapse bg-white text-left text-sm text-gray-500">
+                  <thead className="bg-gray-100 border-b border-gray-300">
                     <tr>
-                      <th scope="col" className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/4">
+                      <th scope="col" className="px-6 py-3.5 text-xs font-bold text-gray-700 uppercase tracking-wider w-1/4 border-r border-gray-300">
                         กฎ
                       </th>
-                      <th scope="col" className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/2">
+                      <th scope="col" className="px-6 py-3.5 text-xs font-bold text-gray-700 uppercase tracking-wider w-1/2 border-r border-gray-300">
                         รายละเอียด
                       </th>
-                      <th scope="col" className="px-6 py-3.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-1/4">
+                      <th scope="col" className="px-6 py-3.5 text-xs font-bold text-gray-700 uppercase tracking-wider w-1/4">
                         บทลงโทษ
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody className="divide-y divide-gray-300">
                     {category.subGroups && category.subGroups.length > 0 ? (
                       category.subGroups.flatMap((sub) => 
                         sub.rules && sub.rules.length > 0 
@@ -117,12 +127,12 @@ export default function RoleplayRules() {
                         <tr key={item.uniqueKey} className="hover:bg-gray-50/75 transition-colors">
                           
                           {/* คอลัมน์ที่ 1: กฎ (ชื่อหมวดหมู่ย่อย) */}
-                          <td className="px-6 py-4 text-sm font-semibold text-gray-900 align-top">
+                          <td className="px-6 py-4 font-semibold text-gray-900 align-top border-r border-gray-300">
                             {item.subTitle || `-`}
                           </td>
 
                           {/* คอลัมน์ที่ 2: รายละเอียดกฎ + ข้อย่อย */}
-                          <td className="px-6 py-4 text-sm text-gray-600 align-top leading-relaxed">
+                          <td className="px-6 py-4 text-gray-600 align-top leading-relaxed border-r border-gray-300">
                             <div className="whitespace-pre-line">{item.text}</div>
                             
                             {item.subItems && item.subItems.length > 0 && (
@@ -135,8 +145,8 @@ export default function RoleplayRules() {
                           </td>
 
                           {/* คอลัมน์ที่ 3: บทลงโทษ */}
-                          <td className="px-6 py-4 text-sm align-top">
-                            {renderPenalty(item.penaltyValue)}
+                          <td className="px-6 py-4 align-top">
+                            {renderPenaltyBadge(item.penaltyValue || item.penalty_value)}
                           </td>
 
                         </tr>
@@ -154,7 +164,7 @@ export default function RoleplayRules() {
 
               {/* ส่วนหมายเหตุท้าย (Footer Note) ถ้ามี */}
               {category.footerNote && (
-                <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-sm">
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-sm">
                   <span className="font-semibold">หมายเหตุ: </span> {category.footerNote}
                 </div>
               )}
