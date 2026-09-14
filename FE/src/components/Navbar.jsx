@@ -158,30 +158,38 @@ const Navbar = () => {
                     </div>
                   </div>
 
+                  {/* ปรับ path เป็น /safezone-rules */}
                   <button
                     type="button"
-                    onClick={() => handleNavigateRule('Safezone', null)}
+                    onClick={() => {
+                      setIsCountryDropdownOpen(false);
+                      navigate('/safezone-rules');
+                    }}
                     className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-indigo-950/40 hover:text-indigo-300 transition-colors flex items-center gap-2 font-semibold border-b border-indigo-950/40 mt-1 cursor-pointer"
                   >
                     <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                     Safezone
                   </button>
 
+                  {/* Path กฎ Roleplay พื้นฐาน */}
                   <button
                     type="button"
-                    onClick={() => handleNavigateRule('กฎ Roleplay พื้นฐาน', null)}
+                    onClick={() => {
+                      setIsCountryDropdownOpen(false);
+                      navigate('/roleplay-rules');
+                    }}
                     className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-indigo-950/40 hover:text-indigo-300 transition-colors flex items-center gap-2 font-semibold border-b border-indigo-950/40 cursor-pointer"
                   >
                     <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                     กฎ Roleplay พื้นฐาน
                   </button>
 
-                  {/* ลิงก์ไปที่ /streaming-policy โดยไม่ใช้ id ตามที่ต้องการ */}
+                  {/* ปรับ path เป็น /streaming-policy-rules */}
                   <button
                     type="button"
                     onClick={() => {
                       setIsCountryDropdownOpen(false);
-                      navigate('/streaming-policy'); 
+                      navigate('/streaming-policy-rules'); 
                     }}
                     className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-indigo-950/40 hover:text-indigo-300 transition-colors flex items-center gap-2 font-semibold mt-1 cursor-pointer"
                   >

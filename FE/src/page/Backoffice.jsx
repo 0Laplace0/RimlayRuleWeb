@@ -8,6 +8,7 @@ import RoleplayRulesCRUD from '@/components/backoffice/RoleplayRulesCRUD';
 import TermsRulesCRUD from '@/components/backoffice/TermsRulesCRUD';
 import RefundRulesCRUD from '@/components/backoffice/RefundRulesCRUD';
 import StreamingPolicyCRUD from '@/components/backoffice/StreamingPolicyCRUD';
+import SafezoneCRUD from '@/components/backoffice/SafezoneCRUD';
 import ActivityLog from '@/components/backoffice/ActivityLog';
 
 const Backoffice = () => {
@@ -20,6 +21,7 @@ const Backoffice = () => {
     { id: 'TermsRules', name: '- จัดการ Terms & Conditions -' },
     { id: 'RefundRules', name: '- จัดการ Refund Policy -' },
     { id: 'StreamingPolicy', name: '- จัดการ Streaming Policy -' },
+    { id: 'Safezone', name: '- จัดการ Safezone -' },
     { id: 'ActivityLog', name: '- Realtime Activity Log -' },
   ];
 
@@ -54,8 +56,10 @@ const Backoffice = () => {
         return <TermsRulesCRUD />;
       case 'RefundRules':
         return <RefundRulesCRUD />;
-      case 'StreamingPolicy': // <-- เพิ่ม case สำหรับเรนเดอร์คอมโพเนนต์
+      case 'StreamingPolicy':
         return <StreamingPolicyCRUD />;
+      case 'Safezone': // <-- เพิ่ม case สำหรับเรนเดอร์ SafezoneCRUD
+        return <SafezoneCRUD />;
       case 'ActivityLog':
         return <ActivityLog />;
       default:

@@ -1,5 +1,9 @@
 const prisma = require('../config/prisma');
 
+const generateSlug = (text) => {
+  return text ? text.toLowerCase().replace(/&/g, 'and').replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-') : 'roleplay';
+};
+
 // [READ ALL] ดึงข้อมูลหมวด roleplay
 exports.getAllRules = async (req, res) => {
   try {
@@ -8,9 +12,15 @@ exports.getAllRules = async (req, res) => {
       orderBy: { id: 'asc' },
       include: {
         subcategories: {
+          orderBy: { id: 'asc' },
           include: {
             rules: {
-              orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }]
+              orderBy: { id: 'asc' },
+              include: {
+                subItems: {
+                  orderBy: { id: 'asc' }
+                }
+              }
             }
           }
         },
@@ -18,155 +28,204 @@ exports.getAllRules = async (req, res) => {
       }
     });
 
-    // แปลงข้อมูลให้เป็นแบบ Flat (เอา rules ออกมาจาก subcategory เพื่อให้ Frontend ใช้ง่ายๆ)
-    const fullData = categories.map((cat) => {
-      // ดึง rules ทั้งหมดจากทุก subcategory มารวมเป็นก้อนเดียว (ปกติหมวดนี้จะมีแค่ 1 subcategory ที่ซ่อนไว้)
-      let allRules = [];
-      cat.subcategories.forEach(sub => {
-        allRules = allRules.concat(sub.rules.map(r => ({
-          id: r.id,
-          title: r.title || '',
-          text: r.ruleText || '',
-          penaltyValue: r.penaltyValue || ''
-        })));
-      });
-
+    const result = categories.map((cat) => {
       const footer = cat.footers[0];
-
       return {
         id: cat.id,
-        category: cat.category,
         title: cat.name,
         slug: cat.slug,
         footerNote: footer ? footer.noteText : '',
-        rules: allRules // ส่งกลับไปเป็น Array ชั้นเดียว
+        subGroups: cat.subcategories.map((sub) => ({
+          subId: sub.id,
+          subTitle: sub.name,
+          rules: sub.rules.map((rule) => ({
+            ruleId: rule.id,
+            text: rule.ruleText,
+            penaltyValue: rule.penaltyValue || '',
+            subItems: rule.subItems.map((si) => ({
+              subItemId: si.id,
+              text: si.content
+            }))
+          }))
+        }))
       };
     });
 
-    res.json(fullData);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error('Get Roleplay Rules Error:', error);
+    return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการดึงข้อมูล', error: error.message });
   }
 };
 
 // [CREATE FULL] เพิ่มข้อมูล Roleplay
 exports.createFullRule = async (req, res) => {
-  const { title, footerNote, rules } = req.body;
-  const ruleCategory = 'roleplay';
+  const { title, footerNote, subGroups } = req.body;
+  const categorySlug = generateSlug(title || 'กฎ Roleplay พื้นฐาน');
 
   try {
-    const baseSlug = title ? title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : 'roleplay';
-    const slug = `${baseSlug}-${Date.now().toString(36)}`;
+    const existing = await prisma.ruleCategory.findFirst({
+      where: { category: 'roleplay', slug: categorySlug }
+    });
 
-    const newCategory = await prisma.$transaction(async (tx) => {
-      // 1. สร้าง Category หลัก
-      const createdCat = await tx.ruleCategory.create({
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'ชื่อหัวข้อนี้มีอยู่แล้วในระบบ' });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const newCategory = await tx.ruleCategory.create({
         data: {
-          category: ruleCategory,
+          category: 'roleplay',
           name: title || 'กฎ Roleplay พื้นฐาน',
-          slug: slug,
-          footers: footerNote ? { create: { noteText: footerNote } } : undefined
+          slug: categorySlug,
+          footers: footerNote ? {
+            create: {
+              noteText: footerNote
+            }
+          } : undefined
         }
       });
 
-      // 2. สร้าง Subcategory แบบจำลอง (Dummy) 1 อัน เพื่อครอบ Rules เอาไว้ตามโครงสร้าง DB
-      if (rules && rules.length > 0) {
-        const dummySubSlug = `general-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`;
-        
-        await tx.ruleSubcategory.create({
-          data: {
-            categoryId: createdCat.id,
-            name: 'General', // ชื่อซ่อน
-            slug: dummySubSlug,
-            sortOrder: 0,
-            rules: {
-              create: rules.map((rule, ruleIndex) => ({
-                categoryId: createdCat.id,
-                title: rule.title || null,
-                ruleText: rule.text || '',
-                penaltyValue: rule.penaltyValue || rule.penalty_value || null,
-                sortOrder: ruleIndex
-              }))
-            }
-          }
-        });
-      }
+      if (subGroups && subGroups.length > 0) {
+        for (const sg of subGroups) {
+          const subTitle = sg.subTitle || sg.sub_title || '';
+          const subSlug = generateSlug(subTitle);
+          const rulesList = sg.rules || sg.items || [];
 
-      return createdCat;
+          await tx.ruleSubcategory.create({
+            data: {
+              categoryId: newCategory.id,
+              name: subTitle,
+              slug: subSlug,
+              rules: {
+                create: rulesList.map((item) => ({
+                  categoryId: newCategory.id,
+                  ruleText: item.text || '',
+                  penaltyValue: item.penaltyValue || item.penalty_value || null,
+                  subItems: item.subItems && item.subItems.length > 0 ? {
+                    create: item.subItems.map((si) => ({
+                      content: si.text
+                    }))
+                  } : undefined
+                }))
+              }
+            }
+          });
+        }
+      }
     });
 
-    res.status(201).json({ message: 'เพิ่มกฎ Roleplay สำเร็จ', id: newCategory.id });
-  } catch (err) {
-    if (err.code === 'P2002') return res.status(400).json({ error: 'ข้อมูลซ้ำซ้อนในระบบ' });
-    res.status(500).json({ error: err.message });
+    return res.status(201).json({ success: true, message: 'เพิ่มกฎ Roleplay สำเร็จ' });
+  } catch (error) {
+    console.error('Create Roleplay Rule Error:', error);
+    return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', error: error.message });
   }
 };
 
 // [UPDATE FULL] อัปเดตข้อมูล Roleplay
 exports.updateFullRule = async (req, res) => {
   const { id } = req.params;
-  const { title, footerNote, rules } = req.body;
   const categoryId = Number(id);
+  const { title, footerNote, subGroups } = req.body;
+  const categorySlug = generateSlug(title);
 
   try {
-    const currentCat = await prisma.ruleCategory.findUnique({ where: { id: categoryId } });
-    if (!currentCat) return res.status(404).json({ error: 'ไม่พบข้อมูล' });
+    const existing = await prisma.ruleCategory.findFirst({
+      where: { 
+        category: 'roleplay', 
+        slug: categorySlug, 
+        NOT: { id: categoryId } 
+      }
+    });
 
-    const newTitle = title || currentCat.name;
-    const baseSlug = newTitle ? newTitle.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : currentCat.slug;
-    const slug = `${baseSlug}-${categoryId}`;
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'ชื่อหัวข้อนี้มีอยู่แล้ว โปรดใช้ชื่ออื่น' });
+    }
+
+    const currentCat = await prisma.ruleCategory.findUnique({
+      where: { id: categoryId }
+    });
+
+    if (!currentCat) {
+      return res.status(404).json({ success: false, message: 'ไม่พบข้อมูลที่ต้องการแก้ไข' });
+    }
 
     await prisma.$transaction(async (tx) => {
       await tx.ruleCategory.update({
         where: { id: categoryId },
-        data: { name: newTitle, slug: slug }
+        data: { name: title, slug: categorySlug }
       });
 
-      await tx.ruleFooter.deleteMany({ where: { categoryId: categoryId } });
-      await tx.ruleSubcategory.deleteMany({ where: { categoryId: categoryId } }); // ลบ Sub เดิม (Rules จะโดนลบตาม Cascade)
+      await tx.ruleFooter.deleteMany({ where: { categoryId } });
+      await tx.ruleSubcategory.deleteMany({ where: { categoryId } });
+      await tx.rule.deleteMany({ where: { categoryId } });
 
-      if (rules && rules.length > 0) {
-        const dummySubSlug = `general-${categoryId}-${Math.random().toString(36).substring(2, 7)}`;
-        
-        await tx.ruleSubcategory.create({
-          data: {
-            categoryId: categoryId,
-            name: 'General',
-            slug: dummySubSlug,
-            sortOrder: 0,
-            rules: {
-              create: rules.map((rule, ruleIndex) => ({
-                categoryId: categoryId,
-                title: rule.title || null,
-                ruleText: rule.text || '',
-                penaltyValue: rule.penaltyValue || rule.penalty_value || null,
-                sortOrder: ruleIndex
-              }))
+      if (subGroups && subGroups.length > 0) {
+        for (const sg of subGroups) {
+          const subTitle = sg.subTitle || sg.sub_title || '';
+          const subSlug = generateSlug(subTitle);
+          const rulesList = sg.rules || sg.items || [];
+
+          await tx.ruleSubcategory.create({
+            data: {
+              categoryId: categoryId,
+              name: subTitle,
+              slug: subSlug,
+              rules: {
+                create: rulesList.map((item) => ({
+                  categoryId: categoryId,
+                  ruleText: item.text || '',
+                  penaltyValue: item.penaltyValue || item.penalty_value || null,
+                  subItems: item.subItems && item.subItems.length > 0 ? {
+                    create: item.subItems.map((si) => ({
+                      content: si.text
+                    }))
+                  } : undefined
+                }))
+              }
             }
-          }
-        });
+          });
+        }
       }
 
       if (footerNote) {
         await tx.ruleFooter.create({
-          data: { categoryId: categoryId, noteText: footerNote }
+          data: {
+            categoryId: categoryId,
+            noteText: footerNote
+          }
         });
       }
     });
 
-    res.json({ message: 'อัปเดตข้อมูลสำเร็จ' });
-  } catch (err) {
-    if (err.code === 'P2002') return res.status(400).json({ error: 'ข้อมูลซ้ำซ้อนในระบบ' });
-    res.status(500).json({ error: err.message });
+    return res.status(200).json({ success: true, message: 'อัปเดตข้อมูลสำเร็จ' });
+  } catch (error) {
+    console.error('Update Roleplay Rule Error:', error);
+    return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการอัปเดตข้อมูล', error: error.message });
   }
 };
 
-// [DELETE MAIN]
+// [DELETE MAIN] ลบข้อมูลหมวดหลัก
 exports.deleteMainRule = async (req, res) => {
   try {
-    await prisma.ruleCategory.delete({ where: { id: Number(req.params.id) } });
-    res.json({ message: 'ลบข้อมูลสำเร็จ' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const { id } = req.params;
+    const categoryId = Number(id);
+
+    const cat = await prisma.ruleCategory.findFirst({
+      where: { id: categoryId, category: 'roleplay' }
+    });
+
+    if (!cat) {
+      return res.status(404).json({ success: false, message: 'ไม่พบข้อมูลที่ต้องการลบ' });
+    }
+
+    await prisma.ruleCategory.delete({
+      where: { id: categoryId }
+    });
+
+    return res.status(200).json({ success: true, message: 'ลบข้อมูลสำเร็จ' });
+  } catch (error) {
+    console.error('Delete Roleplay Rule Error:', error);
+    return res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลบข้อมูล' });
   }
 };
