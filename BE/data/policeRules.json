@@ -43,7 +43,8 @@
       }
     ],
     "footerNote": "Police",
-    "createdAt": "2026-09-15T14:41:23.824Z"
+    "createdAt": "2026-09-15T14:41:23.824Z",
+    "updatedAt": "2026-09-15T17:10:33.201Z"
   },
   {
     "id": "1789483305566",
@@ -56,19 +57,20 @@
         "rules": [
           {
             "text": "ค่าปรับ",
-            "penaltyValue": "ค่าปรับ",
-            "jailTime": "ค่าปรับ"
+            "penaltyValue": "10333 asdasd",
+            "jailTime": "10 asdas"
           },
           {
             "text": "ค่าปรับ",
-            "penaltyValue": "ค่าปรับ",
-            "jailTime": "ค่าปรับ"
+            "penaltyValue": "1022 asdsad",
+            "jailTime": "20 gsdfg"
           }
         ]
       }
     ],
     "images": [],
     "footerNote": "ค่าปรับ",
-    "createdAt": "2026-09-15T14:41:45.566Z"
+    "createdAt": "2026-09-15T14:41:45.566Z",
+    "updatedAt": "2026-09-15T17:10:06.624Z"
   }
 ]

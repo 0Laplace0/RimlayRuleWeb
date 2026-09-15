@@ -131,10 +131,11 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleNavigateRule = (categoryName, mainId = null) => {
+  // ปรับปรุงฟังก์ชันให้รับ path เพื่อเปลี่ยนเส้นทางไปตามหมวดหมู่ที่ส่งมา
+  const handleNavigateRule = (path, categoryName, mainId = null) => {
     setIsCountryDropdownOpen(false);
     setIsAgencyDropdownOpen(false);
-    navigate('/activity-rules', { state: { categoryName, selectedMainId: mainId } });
+    navigate(path, { state: { categoryName, selectedMainId: mainId } });
   };
 
   return (
@@ -206,7 +207,6 @@ const Navbar = () => {
                   </button>
 
                   <div className="py-2 border-b border-indigo-950/40">
-                    {/* ปิดการกดหัวข้อหลัก: กิจกรรม */}
                     <div className="w-full text-left px-4 py-1 text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                       กิจกรรม
@@ -221,7 +221,7 @@ const Navbar = () => {
                           <button
                             type="button"
                             key={ruleItem.id}
-                            onClick={() => handleNavigateRule(ruleItem.title, ruleItem.id)}
+                            onClick={() => handleNavigateRule('/activity-rules', ruleItem.title, ruleItem.id)}
                             className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-indigo-300 hover:bg-indigo-950/30 rounded-lg transition-colors truncate cursor-pointer"
                           >
                             • {ruleItem.title}
@@ -305,7 +305,6 @@ const Navbar = () => {
                   
                   {/* กฎตำรวจ */}
                   <div className="py-2 border-b border-indigo-950/40">
-                    {/* ปิดการกดหัวข้อหลัก: กฎตำรวจ */}
                     <div className="w-full text-left px-4 py-1 text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                       กฎตำรวจ
@@ -320,7 +319,7 @@ const Navbar = () => {
                           <button
                             type="button"
                             key={`police-${policeItem.id}`}
-                            onClick={() => handleNavigateRule(policeItem.title, policeItem.id)}
+                            onClick={() => handleNavigateRule('/police-rules', policeItem.title, policeItem.id)}
                             className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-indigo-300 hover:bg-indigo-950/30 rounded-lg transition-colors truncate cursor-pointer"
                           >
                             • {policeItem.title}
@@ -332,7 +331,6 @@ const Navbar = () => {
 
                   {/* กฎหมอ */}
                   <div className="py-2 border-b border-indigo-950/40">
-                    {/* ปิดการกดหัวข้อหลัก: กฎหมอ */}
                     <div className="w-full text-left px-4 py-1 text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                       กฎหมอ
@@ -347,7 +345,7 @@ const Navbar = () => {
                           <button
                             type="button"
                             key={`doctor-${doctorItem.id}`}
-                            onClick={() => handleNavigateRule(doctorItem.title, doctorItem.id)}
+                            onClick={() => handleNavigateRule('/doctor-rules', doctorItem.title, doctorItem.id)}
                             className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-indigo-300 hover:bg-indigo-950/30 rounded-lg transition-colors truncate cursor-pointer"
                           >
                             • {doctorItem.title}
@@ -359,7 +357,6 @@ const Navbar = () => {
 
                   {/* กฎสภา */}
                   <div className="py-2">
-                    {/* ปิดการกดหัวข้อหลัก: กฎสภา */}
                     <div className="w-full text-left px-4 py-1 text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                       กฎสภา
@@ -374,7 +371,7 @@ const Navbar = () => {
                           <button
                             type="button"
                             key={`council-${councilItem.id}`}
-                            onClick={() => handleNavigateRule(councilItem.title, councilItem.id)}
+                            onClick={() => handleNavigateRule('/council-rules', councilItem.title, councilItem.id)}
                             className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-indigo-300 hover:bg-indigo-950/30 rounded-lg transition-colors truncate cursor-pointer"
                           >
                             • {councilItem.title}
