@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { swalUtils } from '../../utils/swalUtils.js';
-import Pagination from '../Pagination';
+import Pagination from '../Pagination.jsx';
 
 const StreamingPolicyCRUD = () => {
   const [policiesList, setPoliciesList] = useState([]);

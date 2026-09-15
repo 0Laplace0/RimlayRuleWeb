@@ -5,7 +5,7 @@ const {
   createStreamingPolicy,
   updateStreamingPolicy,
   deleteStreamingPolicy
-} = require('../controllers/streamingPolicyController');
+} = require('../controllers/streamingPolicyRuleController');
 
 router.get('/streaming-policies', getAllStreamingPolicies);
 router.post('/streaming-policies', createStreamingPolicy);

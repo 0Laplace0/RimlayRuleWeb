@@ -5,7 +5,7 @@ const {
   createRefundRule,
   updateRefundRule,
   deleteRefundRule
-} = require('../controllers/refundController');
+} = require('../controllers/refundRuleController');
 
 router.get('/refund', getRefundPolicy);
 router.get('/refund-policy', getRefundPolicy);

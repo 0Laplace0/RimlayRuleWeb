@@ -3,10 +3,10 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const safezoneController = require('../controllers/safezoneController');
+const policeController = require('../controllers/policeRuleController');
 
 // ตรวจสอบและสร้างโฟลเดอร์อัตโนมัติถ้ายังไม่มี
-const uploadDir = path.join(__dirname, '../uploads/safezones');
+const uploadDir = path.join(__dirname, '../uploads/police-rules');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -18,7 +18,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, 'safezone-' + uniqueSuffix + path.extname(file.originalname));
+    cb(null, 'police-' + uniqueSuffix + path.extname(file.originalname));
   },
 });
 
@@ -28,9 +28,9 @@ const upload = multer({
 });
 
 // Routes
-router.get('/safezones', safezoneController.getAllSafezones);
-router.post('/safezones', upload.array('images'), safezoneController.createSafezone);
-router.put('/safezones/:id', upload.array('images'), safezoneController.updateSafezone);
-router.delete('/safezones/:id', safezoneController.deleteSafezone);
+router.get('/police-rules', policeController.getPoliceRules);
+router.post('/police-rules', upload.array('images'), policeController.createPoliceRuleCategory);
+router.put('/police-rules/:id', upload.array('images'), policeController.updatePoliceRuleCategory);
+router.delete('/police-rules/:id', policeController.deletePoliceRuleCategory);
 
 module.exports = router;

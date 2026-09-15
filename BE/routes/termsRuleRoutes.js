@@ -5,7 +5,7 @@ const {
   createTermRule,
   updateTermRule,
   deleteTermRule
-} = require('../controllers/termsController');
+} = require('../controllers/termsRuleController');
 
 router.get('/terms', getTermsAndConditions);
 router.get('/terms-and-conditions', getTermsAndConditions);

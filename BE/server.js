@@ -8,28 +8,30 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// เปิดให้เข้าถึงไฟล์รูปภาพที่อัปโหลดได้ผ่าน URL เช่น http://localhost:5000/uploads/...
+// เปิดให้เข้าถึงไฟล์รูปภาพที่อัปโหลดได้ผ่าน URL
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Import Routes
+// Import Routes (ปรับชื่อตัวแปรให้ตรงกับตอนเรียกใช้งาน)
 const authRoutes = require('./routes/authRoutes');
 const activityRuleRoutes = require('./routes/activityRuleRoutes');
 const countryRuleRoutes = require('./routes/countryRuleRoutes');
-const termsRoutes = require('./routes/termsRoutes');
-const refundRoutes = require('./routes/refundRoutes');
+const termsRuleRoutes = require('./routes/termsRuleRoutes');
+const refundRuleRoutes = require('./routes/refundRuleRoutes');
 const roleplayRuleRoutes = require('./routes/roleplayRuleRoutes');
-const streamingPolicyRoutes = require('./routes/streamingPolicyRoutes');
-const safezoneRoutes = require('./routes/safezoneRoutes');
+const streamingPolicyRuleRoutes = require('./routes/streamingPolicyRuleRoutes');
+const safezoneRuleRoutes = require('./routes/safezoneRuleRoutes');
+const policeRuleRoutes = require('./routes/policeRuleRoutes'); 
 
 // Use Routes
 app.use('/api/auth', authRoutes);
 app.use('/api', activityRuleRoutes); 
 app.use('/api', countryRuleRoutes);
-app.use('/api', termsRoutes);
-app.use('/api', refundRoutes);
+app.use('/api', termsRuleRoutes);
+app.use('/api', refundRuleRoutes);
 app.use('/api', roleplayRuleRoutes);
-app.use('/api', streamingPolicyRoutes);
-app.use('/api', safezoneRoutes);
+app.use('/api', streamingPolicyRuleRoutes);
+app.use('/api', safezoneRuleRoutes);
+app.use('/api', policeRuleRoutes); 
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

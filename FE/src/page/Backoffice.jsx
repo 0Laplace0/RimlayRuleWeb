@@ -7,8 +7,9 @@ import CountryRulesCRUD from '@/components/backoffice/CountryRulesCRUD';
 import RoleplayRulesCRUD from '@/components/backoffice/RoleplayRulesCRUD';
 import TermsRulesCRUD from '@/components/backoffice/TermsRulesCRUD';
 import RefundRulesCRUD from '@/components/backoffice/RefundRulesCRUD';
-import StreamingPolicyCRUD from '@/components/backoffice/StreamingPolicyCRUD';
-import SafezoneCRUD from '@/components/backoffice/SafezoneCRUD';
+import StreamingPolicyCRUD from '@/components/backoffice/StreamingPolicyRulesCRUD';
+import SafezoneCRUD from '@/components/backoffice/SafezoneRulesCRUD';
+import PoliceCRUD from '@/components/backoffice/PoliceRulesCRUD';
 import ActivityLog from '@/components/backoffice/ActivityLog';
 
 const Backoffice = () => {
@@ -18,6 +19,7 @@ const Backoffice = () => {
     { id: 'CountryRules', name: '- จัดการกฎประเทศ -' },
     { id: 'ActivityRules', name: '- จัดการกฎกิจกรรม -' },
     { id: 'RoleplayRules', name: '- จัดการกฎ Roleplay -' },
+    { id: 'PoliceRules', name: '- จัดการกฎตำรวจ/ค่าปรับ -' },
     { id: 'TermsRules', name: '- จัดการ Terms & Conditions -' },
     { id: 'RefundRules', name: '- จัดการ Refund Policy -' },
     { id: 'StreamingPolicy', name: '- จัดการ Streaming Policy -' },
@@ -52,13 +54,15 @@ const Backoffice = () => {
         return <ActivityRulesCRUD />;
       case 'RoleplayRules':
         return <RoleplayRulesCRUD />;
+      case 'PoliceRules':
+        return <PoliceCRUD />;
       case 'TermsRules':
         return <TermsRulesCRUD />;
       case 'RefundRules':
         return <RefundRulesCRUD />;
       case 'StreamingPolicy':
         return <StreamingPolicyCRUD />;
-      case 'Safezone': // <-- เพิ่ม case สำหรับเรนเดอร์ SafezoneCRUD
+      case 'Safezone':
         return <SafezoneCRUD />;
       case 'ActivityLog':
         return <ActivityLog />;

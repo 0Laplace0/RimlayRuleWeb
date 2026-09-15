@@ -1,0 +1,74 @@
+[
+  {
+    "id": "1789483283824",
+    "title": "Police",
+    "type": "rule",
+    "items": [],
+    "subGroups": [
+      {
+        "subTitle": "Police",
+        "rules": [
+          {
+            "text": "Police",
+            "subItems": [
+              {
+                "text": "Police"
+              },
+              {
+                "text": "Police"
+              }
+            ]
+          },
+          {
+            "text": "Police",
+            "subItems": [
+              {
+                "text": "Police"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "images": [
+      {
+        "id": "img_1789483283823_0",
+        "imageUrl": "/uploads/police-rules/police-1789483283819-932982065.jpg",
+        "caption": "Police"
+      },
+      {
+        "id": "img_1789483283823_1",
+        "imageUrl": "/uploads/police-rules/police-1789483283821-114320719.jpg",
+        "caption": "Police2"
+      }
+    ],
+    "footerNote": "Police",
+    "createdAt": "2026-09-15T14:41:23.824Z"
+  },
+  {
+    "id": "1789483305566",
+    "title": "ค่าปรับ",
+    "type": "rule",
+    "items": [],
+    "subGroups": [
+      {
+        "subTitle": "ค่าปรับ",
+        "rules": [
+          {
+            "text": "ค่าปรับ",
+            "penaltyValue": "ค่าปรับ",
+            "jailTime": "ค่าปรับ"
+          },
+          {
+            "text": "ค่าปรับ",
+            "penaltyValue": "ค่าปรับ",
+            "jailTime": "ค่าปรับ"
+          }
+        ]
+      }
+    ],
+    "images": [],
+    "footerNote": "ค่าปรับ",
+    "createdAt": "2026-09-15T14:41:45.566Z"
+  }
+]

@@ -7,13 +7,26 @@ const Navbar = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [isAgencyDropdownOpen, setIsAgencyDropdownOpen] = useState(false);
+  
+  // States สำหรับเก็บข้อมูล กฎประเทศ (กิจกรรม)
   const [rulesCategories, setRulesCategories] = useState([]);
   const [isLoadingRules, setIsLoadingRules] = useState(true);
+
+  // States สำหรับเก็บข้อมูล กฎหน่วยงาน (แยกอิสระแต่ละหน่วยงาน)
+  const [policeRules, setPoliceRules] = useState([]);
+  const [isLoadingPolice, setIsLoadingPolice] = useState(true);
+
+  const [doctorRules, setDoctorRules] = useState([]);
+  const [isLoadingDoctor, setIsLoadingDoctor] = useState(true);
+
+  const [councilRules, setCouncilRules] = useState([]);
+  const [isLoadingCouncil, setIsLoadingCouncil] = useState(true);
   
   const countryDropdownRef = useRef(null);
   const agencyDropdownRef = useRef(null);
   const navigate = useNavigate();
 
+  // Fetch กฎกิจกรรม (ภายใต้กฎประเทศ)
   useEffect(() => {
     const fetchRulesMenu = async () => {
       try {
@@ -36,6 +49,75 @@ const Navbar = () => {
     fetchRulesMenu();
   }, []);
 
+  // Fetch กฎตำรวจ
+  useEffect(() => {
+    const fetchPoliceRules = async () => {
+      try {
+        setIsLoadingPolice(true);
+        const response = await fetch('http://localhost:5000/api/police-rules');
+        if (response.ok) {
+          const data = await response.json();
+          const categoriesArray = Array.isArray(data) ? data : (data.categories || data.data || []);
+          setPoliceRules(categoriesArray);
+        } else {
+          console.error('API Error Status (Police):', response.status);
+        }
+      } catch (err) {
+        console.error('Failed to fetch police rules:', err);
+      } finally {
+        setIsLoadingPolice(false);
+      }
+    };
+
+    fetchPoliceRules();
+  }, []);
+
+  // Fetch กฎหมอ
+  useEffect(() => {
+    const fetchDoctorRules = async () => {
+      try {
+        setIsLoadingDoctor(true);
+        const response = await fetch('http://localhost:5000/api/doctor-rules');
+        if (response.ok) {
+          const data = await response.json();
+          const categoriesArray = Array.isArray(data) ? data : (data.categories || data.data || []);
+          setDoctorRules(categoriesArray);
+        } else {
+          console.error('API Error Status (Doctor):', response.status);
+        }
+      } catch (err) {
+        console.error('Failed to fetch doctor rules:', err);
+      } finally {
+        setIsLoadingDoctor(false);
+      }
+    };
+
+    fetchDoctorRules();
+  }, []);
+
+  // Fetch กฎสภา
+  useEffect(() => {
+    const fetchCouncilRules = async () => {
+      try {
+        setIsLoadingCouncil(true);
+        const response = await fetch('http://localhost:5000/api/council-rules');
+        if (response.ok) {
+          const data = await response.json();
+          const categoriesArray = Array.isArray(data) ? data : (data.categories || data.data || []);
+          setCouncilRules(categoriesArray);
+        } else {
+          console.error('API Error Status (Council):', response.status);
+        }
+      } catch (err) {
+        console.error('Failed to fetch council rules:', err);
+      } finally {
+        setIsLoadingCouncil(false);
+      }
+    };
+
+    fetchCouncilRules();
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (countryDropdownRef.current && !countryDropdownRef.current.contains(event.target)) {
@@ -53,12 +135,6 @@ const Navbar = () => {
     setIsCountryDropdownOpen(false);
     setIsAgencyDropdownOpen(false);
     navigate('/activity-rules', { state: { categoryName, selectedMainId: mainId } });
-  };
-
-  const handleNavigateActivityView = () => {
-    setIsCountryDropdownOpen(false);
-    setIsAgencyDropdownOpen(false);
-    navigate('/activity-rules-view');
   };
 
   return (
@@ -130,14 +206,11 @@ const Navbar = () => {
                   </button>
 
                   <div className="py-2 border-b border-indigo-950/40">
-                    <button
-                      type="button"
-                      onClick={handleNavigateActivityView}
-                      className="w-full text-left px-4 py-1 text-xs font-bold text-indigo-400 hover:text-white uppercase tracking-wider flex items-center gap-2 cursor-pointer transition-colors"
-                    >
+                    {/* ปิดการกดหัวข้อหลัก: กิจกรรม */}
+                    <div className="w-full text-left px-4 py-1 text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                       กิจกรรม
-                    </button>
+                    </div>
                     <div className="pl-6 mt-1 space-y-1">
                       {isLoadingRules ? (
                         <div className="px-3 py-1 text-xs text-gray-500">กำลังโหลดหัวข้อ...</div>
@@ -158,7 +231,6 @@ const Navbar = () => {
                     </div>
                   </div>
 
-                  {/* ปรับ path เป็น /safezone-rules */}
                   <button
                     type="button"
                     onClick={() => {
@@ -171,7 +243,6 @@ const Navbar = () => {
                     Safezone
                   </button>
 
-                  {/* Path กฎ Roleplay พื้นฐาน */}
                   <button
                     type="button"
                     onClick={() => {
@@ -184,7 +255,6 @@ const Navbar = () => {
                     กฎ Roleplay พื้นฐาน
                   </button>
 
-                  {/* ปรับ path เป็น /streaming-policy-rules */}
                   <button
                     type="button"
                     onClick={() => {
@@ -215,7 +285,7 @@ const Navbar = () => {
                 type="button"
                 onClick={() => {
                   setIsAgencyDropdownOpen(false);
-                  navigate('/country-rules');
+                  navigate('/agency-rules');
                 }}
                 className="flex items-center gap-2 hover:text-indigo-400 transition-colors duration-200 cursor-pointer focus:outline-none py-2"
               >
@@ -231,33 +301,89 @@ const Navbar = () => {
               </button>
 
               {isAgencyDropdownOpen && (
-                <div className="absolute left-0 mt-0 w-60 bg-[#0f172a] border border-indigo-950/60 rounded-xl shadow-2xl py-3 z-50 backdrop-blur-md animate-fadeIn">
-                  <div className="space-y-1 px-2">
-                    <button
-                      type="button"
-                      onClick={() => handleNavigateRule('กฎตำรวจ', null)}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:text-indigo-300 hover:bg-indigo-950/30 rounded-lg transition-colors flex items-center gap-2 cursor-pointer font-medium"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                <div className="absolute left-0 mt-0 w-72 bg-[#0f172a] border border-indigo-950/60 rounded-xl shadow-2xl py-3 z-50 backdrop-blur-md max-h-[80vh] overflow-y-auto animate-fadeIn">
+                  
+                  {/* กฎตำรวจ */}
+                  <div className="py-2 border-b border-indigo-950/40">
+                    {/* ปิดการกดหัวข้อหลัก: กฎตำรวจ */}
+                    <div className="w-full text-left px-4 py-1 text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                       กฎตำรวจ
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleNavigateRule('กฎหมอ', null)}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:text-indigo-300 hover:bg-indigo-950/30 rounded-lg transition-colors flex items-center gap-2 cursor-pointer font-medium"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                      กฎหมอ
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleNavigateRule('กฎสภา', null)}
-                      className="w-full text-left px-3 py-2 text-xs text-gray-300 hover:text-indigo-300 hover:bg-indigo-950/30 rounded-lg transition-colors flex items-center gap-2 cursor-pointer font-medium"
-                    >
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                      กฎสภา
-                    </button>
+                    </div>
+                    <div className="pl-6 mt-1 space-y-1">
+                      {isLoadingPolice ? (
+                        <div className="px-3 py-1 text-xs text-gray-500">กำลังโหลดหัวข้อ...</div>
+                      ) : policeRules.length === 0 ? (
+                        <div className="px-3 py-1 text-xs text-gray-500">ไม่มีข้อมูลหัวข้อ</div>
+                      ) : (
+                        policeRules.map((policeItem) => (
+                          <button
+                            type="button"
+                            key={`police-${policeItem.id}`}
+                            onClick={() => handleNavigateRule(policeItem.title, policeItem.id)}
+                            className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-indigo-300 hover:bg-indigo-950/30 rounded-lg transition-colors truncate cursor-pointer"
+                          >
+                            • {policeItem.title}
+                          </button>
+                        ))
+                      )}
+                    </div>
                   </div>
+
+                  {/* กฎหมอ */}
+                  <div className="py-2 border-b border-indigo-950/40">
+                    {/* ปิดการกดหัวข้อหลัก: กฎหมอ */}
+                    <div className="w-full text-left px-4 py-1 text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                      กฎหมอ
+                    </div>
+                    <div className="pl-6 mt-1 space-y-1">
+                      {isLoadingDoctor ? (
+                        <div className="px-3 py-1 text-xs text-gray-500">กำลังโหลดหัวข้อ...</div>
+                      ) : doctorRules.length === 0 ? (
+                        <div className="px-3 py-1 text-xs text-gray-500">ไม่มีข้อมูลหัวข้อ</div>
+                      ) : (
+                        doctorRules.map((doctorItem) => (
+                          <button
+                            type="button"
+                            key={`doctor-${doctorItem.id}`}
+                            onClick={() => handleNavigateRule(doctorItem.title, doctorItem.id)}
+                            className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-indigo-300 hover:bg-indigo-950/30 rounded-lg transition-colors truncate cursor-pointer"
+                          >
+                            • {doctorItem.title}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* กฎสภา */}
+                  <div className="py-2">
+                    {/* ปิดการกดหัวข้อหลัก: กฎสภา */}
+                    <div className="w-full text-left px-4 py-1 text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                      กฎสภา
+                    </div>
+                    <div className="pl-6 mt-1 space-y-1">
+                      {isLoadingCouncil ? (
+                        <div className="px-3 py-1 text-xs text-gray-500">กำลังโหลดหัวข้อ...</div>
+                      ) : councilRules.length === 0 ? (
+                        <div className="px-3 py-1 text-xs text-gray-500">ไม่มีข้อมูลหัวข้อ</div>
+                      ) : (
+                        councilRules.map((councilItem) => (
+                          <button
+                            type="button"
+                            key={`council-${councilItem.id}`}
+                            onClick={() => handleNavigateRule(councilItem.title, councilItem.id)}
+                            className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-indigo-300 hover:bg-indigo-950/30 rounded-lg transition-colors truncate cursor-pointer"
+                          >
+                            • {councilItem.title}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
                 </div>
               )}
             </div>
