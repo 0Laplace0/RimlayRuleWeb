@@ -1,0 +1,45 @@
+[
+  {
+    "id": "1789582951786",
+    "title": "แพทย์",
+    "type": "rule",
+    "items": [],
+    "subGroups": [
+      {
+        "subTitle": "แพทย์",
+        "rules": [
+          {
+            "text": "แพทย์",
+            "subItems": [
+              {
+                "text": "แพทย์"
+              }
+            ]
+          },
+          {
+            "text": "แพทย์",
+            "subItems": [
+              {
+                "text": "แพทย์"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "images": [
+      {
+        "id": "img_1789582951786_0",
+        "imageUrl": "/uploads/doctor-rules/doctor-1789582951775-282501477.jpg",
+        "caption": "แพทย์01"
+      },
+      {
+        "id": "img_1789582951786_1",
+        "imageUrl": "/uploads/doctor-rules/doctor-1789582951779-18436540.jpg",
+        "caption": "แพทย์02"
+      }
+    ],
+    "footerNote": "แพทย์",
+    "createdAt": "2026-09-16T18:22:31.786Z"
+  }
+]

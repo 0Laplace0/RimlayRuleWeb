@@ -10,6 +10,7 @@ import RefundRulesCRUD from '@/components/backoffice/RefundRulesCRUD';
 import StreamingPolicyCRUD from '@/components/backoffice/StreamingPolicyRulesCRUD';
 import SafezoneCRUD from '@/components/backoffice/SafezoneRulesCRUD';
 import PoliceCRUD from '@/components/backoffice/PoliceRulesCRUD';
+import DoctorRulesCRUD from '@/components/backoffice/DoctorRulesCRUD';
 import ActivityLog from '@/components/backoffice/ActivityLog';
 
 const Backoffice = () => {
@@ -20,6 +21,7 @@ const Backoffice = () => {
     { id: 'ActivityRules', name: '- จัดการกฎกิจกรรม -' },
     { id: 'RoleplayRules', name: '- จัดการกฎ Roleplay -' },
     { id: 'PoliceRules', name: '- จัดการกฎตำรวจ/ค่าปรับ -' },
+    { id: 'DoctorRules', name: '- จัดการกฎแพทย์/ค่ารักษา -' },
     { id: 'TermsRules', name: '- จัดการ Terms & Conditions -' },
     { id: 'RefundRules', name: '- จัดการ Refund Policy -' },
     { id: 'StreamingPolicy', name: '- จัดการ Streaming Policy -' },
@@ -56,6 +58,8 @@ const Backoffice = () => {
         return <RoleplayRulesCRUD />;
       case 'PoliceRules':
         return <PoliceCRUD />;
+      case 'DoctorRules':
+        return <DoctorRulesCRUD />;
       case 'TermsRules':
         return <TermsRulesCRUD />;
       case 'RefundRules':

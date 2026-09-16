@@ -3,10 +3,10 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const policeController = require('../controllers/policeRuleController');
+const doctorController = require('../controllers/doctorRuleController');
 
 // ตรวจสอบและสร้างโฟลเดอร์อัตโนมัติถ้ายังไม่มี
-const uploadDir = path.join(__dirname, '../uploads/police-rules');
+const uploadDir = path.join(__dirname, '../uploads/doctor-rules');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -18,19 +18,19 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, 'police-' + uniqueSuffix + path.extname(file.originalname));
+    cb(null, 'doctor-' + uniqueSuffix + path.extname(file.originalname));
   },
 });
 
-const upload = multer({
+const upload = multer({ 
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 } // จำกัดขนาดไฟล์ไม่เกิน 5MB
 });
 
 // Routes
-router.get('/police-rules', policeController.getPoliceRules);
-router.post('/police-rules', upload.array('images'), policeController.createPoliceRuleCategory);
-router.put('/police-rules/:id', upload.array('images'), policeController.updatePoliceRuleCategory);
-router.delete('/police-rules/:id', policeController.deletePoliceRuleCategory);
+router.get('/doctor-rules', doctorController.getDoctorRules);
+router.post('/doctor-rules', upload.array('images'), doctorController.createDoctorRuleCategory);
+router.put('/doctor-rules/:id', upload.array('images'), doctorController.updateDoctorRuleCategory);
+router.delete('/doctor-rules/:id', doctorController.deleteDoctorRuleCategory);
 
 module.exports = router;

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
 
-export default function PoliceRules() {
+export default function DoctorRules() {
   const location = useLocation();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -11,13 +11,13 @@ export default function PoliceRules() {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
-    fetchPoliceRules();
+    fetchDoctorRules();
   }, [location.state]);
 
-  const fetchPoliceRules = async () => {
+  const fetchDoctorRules = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/police-rules');
+      const res = await axios.get('http://localhost:5000/api/doctor-rules');
       const data = res.data.data || res.data || [];
       const categoriesArray = Array.isArray(data) ? data : [];
       setCategories(categoriesArray);
@@ -60,17 +60,17 @@ export default function PoliceRules() {
       <div className="flex flex-wrap items-center gap-1.5">
         {words.map((word, idx) => {
           if (!word) return null;
-          if (word.includes('จำคุก')) {
+          if (word.includes('พักงาน') || word.includes('ใบเตือน') || word.includes('ไล่ออก')) {
             return (
               <span
                 key={idx}
-                className="px-2.5 py-1 bg-cyan-50 border border-cyan-200 text-cyan-700 rounded-md text-xs font-semibold"
+                className="px-2.5 py-1 bg-rose-50 border border-rose-200 text-rose-700 rounded-md text-xs font-semibold"
               >
                 {word}
               </span>
             );
           }
-          if (word.includes('ปรับ') || word.includes('X5')) {
+          if (word.includes('ปรับ') || word.includes('บาท') || word.includes('$') || word.includes('X5')) {
             return (
               <span
                 key={idx}
@@ -81,7 +81,7 @@ export default function PoliceRules() {
             );
           }
           return (
-            <span key={idx} className="text-gray-700 text-xs">
+            <span key={idx} className="text-gray-700 text-xs font-medium">
               {word}
             </span>
           );
@@ -90,16 +90,33 @@ export default function PoliceRules() {
     );
   };
 
-  // เช็คระบบหมวดหมู่ค่าปรับแบบครอบคลุม ป้องกัน API ไม่ส่ง type: 'fine'
+  // เช็คระบบหมวดหมู่ค่ารักษา/ค่าบริการแบบครอบคลุม
   const isFineCategory = (() => {
     if (!selectedCategory) return false;
-    if (selectedCategory.type === 'fine' || selectedCategory.type === 'fines' || selectedCategory.type === 'penalty') return true;
-    if (selectedCategory.title && (selectedCategory.title.includes('ค่าปรับ') || selectedCategory.title.toLowerCase().includes('fine'))) return true;
-    
+    if (
+      selectedCategory.type === 'fine' ||
+      selectedCategory.type === 'fines' ||
+      selectedCategory.type === 'penalty' ||
+      selectedCategory.type === 'fee' ||
+      selectedCategory.type === 'price'
+    )
+      return true;
+    if (
+      selectedCategory.title &&
+      (selectedCategory.title.includes('ค่ารักษา') ||
+        selectedCategory.title.includes('ค่าบริการ') ||
+        selectedCategory.title.includes('ค่าปรับ') ||
+        selectedCategory.title.toLowerCase().includes('fine') ||
+        selectedCategory.title.toLowerCase().includes('fee'))
+    )
+      return true;
+
     if (selectedCategory.subGroups && selectedCategory.subGroups.length > 0) {
-      return selectedCategory.subGroups.some(sub => {
+      return selectedCategory.subGroups.some((sub) => {
         const list = sub.rules || sub.items || [];
-        return list.some(item => typeof item === 'object' && (item.penaltyValue || item.fine || item.jailTime || item.time));
+        return list.some(
+          (item) => typeof item === 'object' && (item.penaltyValue || item.fine || item.price || item.fee)
+        );
       });
     }
     return false;
@@ -110,7 +127,7 @@ export default function PoliceRules() {
       <Navbar />
 
       <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 flex flex-col items-center">
-        {loading && <div className="text-center py-10 text-gray-500">กำลังโหลดข้อมูลกฎตำรวจ...</div>}
+        {loading && <div className="text-center py-10 text-gray-500">กำลังโหลดข้อมูลกฎแพทย์...</div>}
         {error && <div className="text-center py-10 text-red-500">เกิดข้อผิดพลาด: {error}</div>}
 
         {!loading && !error && selectedCategory && (
@@ -203,7 +220,7 @@ export default function PoliceRules() {
                         <div key={imgIdx} className="space-y-2 text-center">
                           <img
                             src={`http://localhost:5000${img.imageUrl}`}
-                            alt={img.caption || 'rule-img'}
+                            alt={img.caption || 'doctor-rule-img'}
                             className="w-1/2 mx-auto h-auto rounded-lg object-cover"
                           />
                           {img.caption && (
@@ -216,52 +233,45 @@ export default function PoliceRules() {
                 )}
               </div>
             ) : (
-              /* =================== 2. ฝั่ง ค่าปรับ (แสดง ทั้งหัวข้อ และ ตาราง) =================== */
+              /* =================== 2. ฝั่ง ค่ารักษา / ค่าบริการ (แสดง ตาราง 2 ช่อง) =================== */
               <div className="space-y-6">
                 {selectedCategory.subGroups && selectedCategory.subGroups.length > 0 ? (
                   selectedCategory.subGroups.map((sub, sIdx) => {
                     const ruleList = sub.rules || sub.items || [];
                     return (
                       <div key={sIdx} className="space-y-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                        {/* แสดงหัวข้อของกลุ่มค่าปรับ (เช่น "| ค่าปรับ") */}
+                        {/* แสดงหัวข้อของกลุ่ม */}
                         {sub.subTitle && (
                           <h3 className="text-base sm:text-lg font-bold text-slate-900 border-l-4 border-slate-900 pl-3">
                             {sub.subTitle}
                           </h3>
                         )}
 
-                        {/* แสดงตาราง 3 ช่องด้านล่างหัวข้อ */}
+                        {/* ตาราง 2 ช่อง (รายการ | ค่ารักษา / ค่าบริการ) */}
                         <div className="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
                           <table className="min-w-full border-collapse text-left text-sm">
                             <thead className="bg-gray-100 border-b border-gray-200 text-gray-700">
                               <tr>
-                                <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider w-1/2 border-r border-gray-200">
+                                <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider w-2/3 border-r border-gray-200">
                                   รายการ
                                 </th>
-                                <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider w-1/4 border-r border-gray-200">
-                                  ค่าปรับ
-                                </th>
-                                <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider w-1/4">
-                                  จำคุก / นาที
+                                <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider w-1/3">
+                                  ค่ารักษา / ค่าบริการ
                                 </th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
                               {ruleList.map((rule, rIdx) => {
                                 const ruleText = typeof rule === 'string' ? rule : (rule.text || rule.description || '-');
-                                const fineVal = typeof rule === 'object' ? (rule.penaltyValue || rule.fine) : null;
-                                const jailVal = typeof rule === 'object' ? (rule.jailTime || rule.time) : null;
+                                const priceVal = typeof rule === 'object' ? (rule.penaltyValue || rule.fine || rule.price || rule.fee) : null;
 
                                 return (
                                   <tr key={rIdx} className="hover:bg-gray-50 transition">
                                     <td className="px-6 py-4 font-medium text-gray-900 align-top border-r border-gray-200">
                                       {ruleText}
                                     </td>
-                                    <td className="px-6 py-4 align-top border-r border-gray-200 font-semibold text-gray-800">
-                                      {renderBadge(fineVal)}
-                                    </td>
-                                    <td className="px-6 py-4 align-top">
-                                      {renderBadge(jailVal)}
+                                    <td className="px-6 py-4 align-top font-semibold text-gray-800">
+                                      {renderBadge(priceVal)}
                                     </td>
                                   </tr>
                                 );
@@ -279,33 +289,26 @@ export default function PoliceRules() {
                       <table className="min-w-full border-collapse text-left text-sm">
                         <thead className="bg-gray-100 border-b border-gray-200 text-gray-700">
                           <tr>
-                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider w-1/2 border-r border-gray-200">
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider w-2/3 border-r border-gray-200">
                               รายการ
                             </th>
-                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider w-1/4 border-r border-gray-200">
-                              ค่าปรับ
-                            </th>
-                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider w-1/4">
-                              จำคุก / นาที
+                            <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider w-1/3">
+                              ค่ารักษา / ค่าบริการ
                             </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                           {(selectedCategory.rules || selectedCategory.items || []).map((rule, rIdx) => {
                             const ruleText = typeof rule === 'string' ? rule : (rule.text || rule.description || '-');
-                            const fineVal = typeof rule === 'object' ? (rule.penaltyValue || rule.fine) : null;
-                            const jailVal = typeof rule === 'object' ? (rule.jailTime || rule.time) : null;
+                            const priceVal = typeof rule === 'object' ? (rule.penaltyValue || rule.fine || rule.price || rule.fee) : null;
 
                             return (
                               <tr key={rIdx} className="hover:bg-gray-50 transition">
                                 <td className="px-6 py-4 font-medium text-gray-900 align-top border-r border-gray-200">
                                   {ruleText}
                                 </td>
-                                <td className="px-6 py-4 align-top border-r border-gray-200 font-semibold text-gray-800">
-                                  {renderBadge(fineVal)}
-                                </td>
-                                <td className="px-6 py-4 align-top">
-                                  {renderBadge(jailVal)}
+                                <td className="px-6 py-4 align-top font-semibold text-gray-800">
+                                  {renderBadge(priceVal)}
                                 </td>
                               </tr>
                             );

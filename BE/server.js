@@ -21,6 +21,7 @@ const roleplayRuleRoutes = require('./routes/roleplayRuleRoutes');
 const streamingPolicyRuleRoutes = require('./routes/streamingPolicyRuleRoutes');
 const safezoneRuleRoutes = require('./routes/safezoneRuleRoutes');
 const policeRuleRoutes = require('./routes/policeRuleRoutes'); 
+const doctorRuleRoutes = require('./routes/doctorRuleRoutes');
 
 // Use Routes
 app.use('/api/auth', authRoutes);
@@ -31,7 +32,8 @@ app.use('/api', refundRuleRoutes);
 app.use('/api', roleplayRuleRoutes);
 app.use('/api', streamingPolicyRuleRoutes);
 app.use('/api', safezoneRuleRoutes);
-app.use('/api', policeRuleRoutes); 
+app.use('/api', policeRuleRoutes);
+app.use('/api', doctorRuleRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

@@ -3,13 +3,13 @@ import axios from 'axios';
 import { swalUtils } from '../../utils/swalUtils.js';
 import Pagination from '../Pagination';
 
-export default function PoliceRulesCRUD() {
+export default function DoctorRulesCRUD() {
   // --- STATES ---
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [view, setView] = useState('table'); // 'table' | 'form-police' | 'form-terms'
-  const [formType, setFormType] = useState('police'); // 'police' | 'terms'
+  const [view, setView] = useState('table'); // 'table' | 'form-treatment' | 'form-terms'
+  const [formType, setFormType] = useState('treatment'); // 'treatment' | 'terms'
   const [isSelectModalOpen, setIsSelectModalOpen] = useState(false); // Popup State
 
   // Pagination State
@@ -21,12 +21,12 @@ export default function PoliceRulesCRUD() {
   const [title, setTitle] = useState('');
   const [footerNote, setFooterNote] = useState('');
   
-  // 1. Police Rules SubGroups (มี penaltyValue, jailTime)
-  const [policeSubGroups, setPoliceSubGroups] = useState([
-    { subTitle: '', rules: [{ text: '', penaltyValue: '', jailTime: '' }] }
+  // 1. Treatment Rules SubGroups (สำหรับฟอร์มค่ารักษา/อัตราค่าบริการ)
+  const [treatmentSubGroups, setTreatmentSubGroups] = useState([
+    { subTitle: '', rules: [{ text: '', penaltyValue: '' }] }
   ]);
 
-  // 2. Terms Rules SubGroups (มี subItems)
+  // 2. Terms Rules SubGroups (มี subItems สำหรับกฎทั่วไปของแพทย์)
   const [termsSubGroups, setTermsSubGroups] = useState([
     { 
       subId: `temp_${Date.now()}`, 
@@ -41,7 +41,7 @@ export default function PoliceRulesCRUD() {
     }
   ]);
 
-  // 3. Terms Images State (สำหรับฟอร์มกฎ)
+  // 3. Terms Images State (สำหรับฟอร์มกฎที่มีรูปภาพ)
   const [termsImages, setTermsImages] = useState([]);
 
   const getAuthHeader = () => {
@@ -50,18 +50,18 @@ export default function PoliceRulesCRUD() {
   };
 
   useEffect(() => {
-    fetchPoliceRules();
+    fetchDoctorRules();
   }, []);
 
   // --- API CALLS ---
-  const fetchPoliceRules = async () => {
+  const fetchDoctorRules = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/police-rules', getAuthHeader());
+      const res = await axios.get('http://localhost:5000/api/doctor-rules', getAuthHeader());
       setCategories(res.data.data || res.data || []);
     } catch (err) {
       console.error(err);
-      swalUtils.error('เกิดข้อผิดพลาด!', 'ไม่สามารถดึงข้อมูลกฎตำรวจได้');
+      swalUtils.error('เกิดข้อผิดพลาด!', 'ไม่สามารถดึงข้อมูลกฎแพทย์ได้');
     } finally {
       setLoading(false);
     }
@@ -71,7 +71,7 @@ export default function PoliceRulesCRUD() {
     setEditingId(null);
     setTitle('');
     setFooterNote('');
-    setPoliceSubGroups([{ subTitle: '', rules: [{ text: '', penaltyValue: '', jailTime: '' }] }]);
+    setTreatmentSubGroups([{ subTitle: '', rules: [{ text: '', penaltyValue: '' }] }]);
     setTermsSubGroups([{ subId: `temp_${Date.now()}`, subTitle: '', rules: [{ ruleId: `temp_${Date.now()}`, text: '', subItems: [] }] }]);
     setTermsImages([]);
     setView('table');
@@ -89,7 +89,7 @@ export default function PoliceRulesCRUD() {
     if (type === 'terms') {
       setView('form-terms');
     } else {
-      setView('form-police');
+      setView('form-treatment');
     }
   };
 
@@ -128,17 +128,16 @@ export default function PoliceRulesCRUD() {
 
       setView('form-terms');
     } else {
-      setFormType('police');
-      const mappedPolice = rawSubGroups.map(sub => ({
+      setFormType('treatment');
+      const mappedTreatment = rawSubGroups.map(sub => ({
         subTitle: sub.subTitle || sub.sub_title || '',
         rules: (sub.rules || sub.items || []).map(r => ({
           text: r.text || '',
-          penaltyValue: r.penaltyValue || r.penalty_value || '',
-          jailTime: r.jailTime || r.jail_time || ''
+          penaltyValue: r.penaltyValue || r.penalty_value || ''
         }))
       }));
-      setPoliceSubGroups(mappedPolice.length > 0 ? mappedPolice : [{ subTitle: '', rules: [{ text: '', penaltyValue: '', jailTime: '' }] }]);
-      setView('form-police');
+      setTreatmentSubGroups(mappedTreatment.length > 0 ? mappedTreatment : [{ subTitle: '', rules: [{ text: '', penaltyValue: '' }] }]);
+      setView('form-treatment');
     }
   };
 
@@ -153,9 +152,9 @@ export default function PoliceRulesCRUD() {
 
     if (result.isConfirmed) {
       try {
-        await axios.delete(`http://localhost:5000/api/police-rules/${id}`, getAuthHeader());
+        await axios.delete(`http://localhost:5000/api/doctor-rules/${id}`, getAuthHeader());
         swalUtils.success('ลบข้อมูลสำเร็จ!', 'ได้ทำการลบรายการเรียบร้อยแล้ว');
-        fetchPoliceRules();
+        fetchDoctorRules();
       } catch (err) {
         console.error(err);
         swalUtils.error('ล้มเหลว!', err.response?.data?.message || 'เกิดข้อผิดพลาดในการลบข้อมูล');
@@ -172,12 +171,10 @@ export default function PoliceRulesCRUD() {
     }
 
     let payload = {};
-    let apiUrl = 'http://localhost:5000/api/police-rules'; // ตั้งค่าเริ่มต้นเป็น police-rules ได้เลย หรือกำหนดแยกตามเงื่อนไข
+    let apiUrl = 'http://localhost:5000/api/doctor-rules';
     let isMultipart = false;
 
     if (formType === 'terms') {
-      apiUrl = 'http://localhost:5000/api/police-rules'; // <--- เปลี่ยนจาก /api/terms เป็น /api/police-rules ที่นี่
-      
       const formattedSubGroups = termsSubGroups.map(sg => ({
         subTitle: sg.subTitle || '',
         rules: (sg.rules || []).map(r => ({
@@ -210,12 +207,11 @@ export default function PoliceRulesCRUD() {
         };
       }
     } else {
-      apiUrl = 'http://localhost:5000/api/police-rules';
       payload = {
         title: title.trim(),
         footerNote: footerNote.trim(),
         footer_note: footerNote.trim(),
-        subGroups: policeSubGroups
+        subGroups: treatmentSubGroups
       };
     }
 
@@ -235,39 +231,39 @@ export default function PoliceRulesCRUD() {
         swalUtils.success('เพิ่มข้อมูลสำเร็จแล้ว!');
       }
       resetForm();
-      fetchPoliceRules();
+      fetchDoctorRules();
     } catch (err) {
       console.error(err);
       swalUtils.error('เกิดข้อผิดพลาด!', err.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้');
     }
   };
 
-  // --- POLICE FORM HANDLERS ---
-  const handleAddPoliceSubGroup = () => {
-    setPoliceSubGroups([...policeSubGroups, { subTitle: '', rules: [{ text: '', penaltyValue: '', jailTime: '' }] }]);
+  // --- TREATMENT FORM HANDLERS ---
+  const handleAddTreatmentSubGroup = () => {
+    setTreatmentSubGroups([...treatmentSubGroups, { subTitle: '', rules: [{ text: '', penaltyValue: '' }] }]);
   };
-  const handleRemovePoliceSubGroup = (subIdx) => {
-    setPoliceSubGroups(policeSubGroups.filter((_, idx) => idx !== subIdx));
+  const handleRemoveTreatmentSubGroup = (subIdx) => {
+    setTreatmentSubGroups(treatmentSubGroups.filter((_, idx) => idx !== subIdx));
   };
-  const handlePoliceSubTitleChange = (subIdx, value) => {
-    const updated = [...policeSubGroups];
+  const handleTreatmentSubTitleChange = (subIdx, value) => {
+    const updated = [...treatmentSubGroups];
     updated[subIdx].subTitle = value;
-    setPoliceSubGroups(updated);
+    setTreatmentSubGroups(updated);
   };
-  const handleAddPoliceRule = (subIdx) => {
-    const updated = [...policeSubGroups];
-    updated[subIdx].rules.push({ text: '', penaltyValue: '', jailTime: '' });
-    setPoliceSubGroups(updated);
+  const handleAddTreatmentRule = (subIdx) => {
+    const updated = [...treatmentSubGroups];
+    updated[subIdx].rules.push({ text: '', penaltyValue: '' });
+    setTreatmentSubGroups(updated);
   };
-  const handleRemovePoliceRule = (subIdx, ruleIdx) => {
-    const updated = [...policeSubGroups];
+  const handleRemoveTreatmentRule = (subIdx, ruleIdx) => {
+    const updated = [...treatmentSubGroups];
     updated[subIdx].rules = updated[subIdx].rules.filter((_, idx) => idx !== ruleIdx);
-    setPoliceSubGroups(updated);
+    setTreatmentSubGroups(updated);
   };
-  const handlePoliceRuleChange = (subIdx, ruleIdx, field, value) => {
-    const updated = [...policeSubGroups];
+  const handleTreatmentRuleChange = (subIdx, ruleIdx, field, value) => {
+    const updated = [...treatmentSubGroups];
     updated[subIdx].rules[ruleIdx][field] = value;
-    setPoliceSubGroups(updated);
+    setTreatmentSubGroups(updated);
   };
 
   // --- TERMS FORM HANDLERS ---
@@ -404,7 +400,7 @@ export default function PoliceRulesCRUD() {
       {view === 'table' ? (
         <div>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <h2 className="text-2xl font-bold text-white">จัดการข้อมูล: กฎ & ค่าปรับ (ตำรวจ)</h2>
+            <h2 className="text-2xl font-bold text-white">จัดการข้อมูล: กฎ & ค่ารักษา (แพทย์)</h2>
             
             <div className="flex items-center gap-3 w-full md:w-auto">
               <input
@@ -478,13 +474,53 @@ export default function PoliceRulesCRUD() {
               totalItems={filteredCategories.length}
             />
           )}
+
+          {/* Modal สำหรับเลือกรูปแบบฟอร์มตอนเพิ่มข้อมูล */}
+          {isSelectModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+              <div className="bg-[#1e293b] border border-indigo-950 rounded-2xl max-w-md w-full p-6 space-y-6 shadow-2xl">
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-bold text-white">เลือกรูปแบบข้อมูล</h3>
+                  <p className="text-xs text-gray-400">กรุณาเลือกประเภทรูปแบบที่คุณต้องการสร้าง</p>
+                </div>
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectFormType('terms')}
+                    className="p-4 rounded-xl bg-[#0f172a] hover:bg-indigo-950/40 border border-indigo-900/50 text-left transition space-y-1 cursor-pointer group"
+                  >
+                    <div className="font-bold text-indigo-300 group-hover:text-indigo-200">กฎ</div>
+                    <div className="text-xs text-gray-400">ฟอร์มกฎแบบมีหัวข้อหลัก กลุ่มย่อย ข้อ และข้อย่อยแบบลำดับชั้น</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectFormType('treatment')}
+                    className="p-4 rounded-xl bg-[#0f172a] hover:bg-indigo-950/40 border border-indigo-900/50 text-left transition space-y-1 cursor-pointer group"
+                  >
+                    <div className="font-bold text-indigo-300 group-hover:text-indigo-200">ค่ารักษา</div>
+                    <div className="text-xs text-gray-400">ฟอร์มสำหรับระบุรายการ และราคาค่ารักษา</div>
+                  </button>
+                </div>
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsSelectModalOpen(false)}
+                    className="px-6 py-2 rounded-full text-xs font-bold text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition cursor-pointer"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      ) : view === 'form-police' ? (
-        /* --- POLICE FORM VIEW (ค่าปรับ) --- */
+      ) : view === 'form-treatment' ? (
+        /* --- TREATMENT FORM VIEW (ค่ารักษา) --- */
         <div className="space-y-6">
           <div className="bg-[#1e293b] border border-indigo-950/60 py-4 px-6 rounded-lg text-center shadow-lg">
             <h1 className="text-lg font-bold text-indigo-300 tracking-wide">
-              :: {editingId ? 'แก้ไขข้อมูลค่าปรับ' : 'เพิ่มข้อมูลค่าปรับ'} ::
+              :: {editingId ? 'แก้ไขข้อมูลค่ารักษา' : 'เพิ่มข้อมูลค่ารักษา'} ::
             </h1>
           </div>
 
@@ -498,24 +534,24 @@ export default function PoliceRulesCRUD() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="flex-1 px-4 py-2.5 rounded-xl bg-[#0f172a] border border-indigo-950/60 focus:outline-none focus:border-indigo-500 text-white"
-                  placeholder="เช่น อัตราค่าปรับจราจร"
+                  placeholder="เช่น อัตราค่ารักษาทางการแพทย์"
                 />
               </div>
             </div>
 
-            {/* SubGroups for Police */}
+            {/* SubGroups for Treatment */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-indigo-950/40 pb-2">
                 <h3 className="text-md font-bold text-indigo-300">หมวดหมู่กลุ่มย่อย & รายการ</h3>
-                <button type="button" onClick={handleAddPoliceSubGroup} className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-400 rounded-full text-xs font-bold transition cursor-pointer">
+                <button type="button" onClick={handleAddTreatmentSubGroup} className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-400 rounded-full text-xs font-bold transition cursor-pointer">
                   + เพิ่มกลุ่มย่อย
                 </button>
               </div>
 
-              {policeSubGroups.map((sub, subIdx) => (
+              {treatmentSubGroups.map((sub, subIdx) => (
                 <div key={subIdx} className="bg-[#1e293b]/80 p-5 rounded-2xl border border-indigo-900/30 space-y-4 relative">
-                  {policeSubGroups.length > 1 && (
-                    <button type="button" onClick={() => handleRemovePoliceSubGroup(subIdx)} className="absolute top-4 right-4 text-gray-500 hover:text-rose-500 cursor-pointer" title="ลบกลุ่มนี้">
+                  {treatmentSubGroups.length > 1 && (
+                    <button type="button" onClick={() => handleRemoveTreatmentSubGroup(subIdx)} className="absolute top-4 right-4 text-gray-500 hover:text-rose-500 cursor-pointer" title="ลบกลุ่มนี้">
                       ✕
                     </button>
                   )}
@@ -526,7 +562,7 @@ export default function PoliceRulesCRUD() {
                       type="text"
                       placeholder="ชื่อกลุ่มย่อย (ถ้ามี)..."
                       value={sub.subTitle}
-                      onChange={(e) => handlePoliceSubTitleChange(subIdx, e.target.value)}
+                      onChange={(e) => handleTreatmentSubTitleChange(subIdx, e.target.value)}
                       className="flex-1 px-4 py-2.5 rounded-xl bg-[#0f172a] border border-indigo-950/60 text-white font-semibold text-sm focus:outline-none focus:border-indigo-500"
                     />
                   </div>
@@ -539,14 +575,14 @@ export default function PoliceRulesCRUD() {
                           <textarea
                             rows="2"
                             required
-                            placeholder="รายละเอียด..."
+                            placeholder="รายละเอียดการรักษา..."
                             value={rule.text}
-                            onChange={(e) => handlePoliceRuleChange(subIdx, ruleIdx, 'text', e.target.value)}
+                            onChange={(e) => handleTreatmentRuleChange(subIdx, ruleIdx, 'text', e.target.value)}
                             className="flex-1 px-3 py-2 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-gray-200 text-sm focus:outline-none focus:border-indigo-500"
                           />
                           <button
                             type="button"
-                            onClick={() => handleRemovePoliceRule(subIdx, ruleIdx)}
+                            onClick={() => handleRemoveTreatmentRule(subIdx, ruleIdx)}
                             className="p-2.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer"
                             title="ลบข้อนี้"
                           >
@@ -554,26 +590,15 @@ export default function PoliceRulesCRUD() {
                           </button>
                         </div>
 
-                        {/* Penalty & Jail Time */}
+                        {/* Penalty / Treatment Value */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
                           <div>
-                            <label className="text-xs text-gray-400 mb-1 block">ค่าปรับ / บทลงโทษ</label>
+                            <label className="text-xs text-gray-400 mb-1 block">ค่ารักษา</label>
                             <input
                               type="text"
-                              placeholder="เช่น [ยึดของกลาง] 5,000 บาท"
+                              placeholder="เช่น 5,000 บาท"
                               value={rule.penaltyValue}
-                              onChange={(e) => handlePoliceRuleChange(subIdx, ruleIdx, 'penaltyValue', e.target.value)}
-                              className="w-full px-3 py-1.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="text-xs text-gray-400 mb-1 block">เวลาจำคุก (ถ้ามี)</label>
-                            <input
-                              type="text"
-                              placeholder="เช่น 30 นาที หรือ 3 เดือน"
-                              value={rule.jailTime}
-                              onChange={(e) => handlePoliceRuleChange(subIdx, ruleIdx, 'jailTime', e.target.value)}
+                              onChange={(e) => handleTreatmentRuleChange(subIdx, ruleIdx, 'penaltyValue', e.target.value)}
                               className="w-full px-3 py-1.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
                             />
                           </div>
@@ -581,7 +606,7 @@ export default function PoliceRulesCRUD() {
                       </div>
                     ))}
 
-                    <button type="button" onClick={() => handleAddPoliceRule(subIdx)} className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer">
+                    <button type="button" onClick={() => handleAddTreatmentRule(subIdx)} className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer">
                       + เพิ่มรายการในกลุ่มนี้
                     </button>
                   </div>
@@ -607,11 +632,11 @@ export default function PoliceRulesCRUD() {
           </form>
         </div>
       ) : (
-        /* --- TERMS FORM VIEW (กฎ) --- */
+        /* --- TERMS FORM VIEW (กฎ + รูปภาพ) --- */
         <div className="space-y-6">
           <div className="bg-[#1e293b] border border-indigo-950/60 py-4 px-6 rounded-lg text-center shadow-lg">
             <h1 className="text-lg font-bold text-indigo-300 tracking-wide">
-              :: {editingId ? 'แก้ไขข้อมูลกฎ (ตำรวจ)' : 'เพิ่มข้อมูลกฎ (ตำรวจ)'} ::
+              :: {editingId ? 'แก้ไขข้อมูลกฎ (แพทย์)' : 'เพิ่มข้อมูลกฎ (แพทย์)'} ::
             </h1>
           </div>
 
@@ -697,90 +722,97 @@ export default function PoliceRulesCRUD() {
                               <button 
                                 type="button" 
                                 onClick={() => handleRemoveTermsSubItem(sg.subId, rule.ruleId, subItem.subItemId)} 
-                                className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0 text-xs"
+                                className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0"
                                 title="ลบข้อย่อย"
                               >
                                 ✕
                               </button>
                             </div>
                           ))}
-                          <button 
-                            type="button" 
-                            onClick={() => handleAddTermsSubItem(sg.subId, rule.ruleId)} 
-                            className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold cursor-pointer pt-1"
-                          >
-                            + เพิ่มข้อย่อย ({ruleIndex + 1}.x)
+                          <button type="button" onClick={() => handleAddTermsSubItem(sg.subId, rule.ruleId)} className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer pt-1">
+                            + เพิ่มข้อย่อย
                           </button>
                         </div>
                       </div>
                     ))}
 
-                    <button type="button" onClick={() => handleAddTermsRule(sg.subId)} className="mt-2 text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold cursor-pointer">
-                      + เพิ่มข้อบังคับ/กฎ (ข้อใหญ่)
+                    <button type="button" onClick={() => handleAddTermsRule(sg.subId)} className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer">
+                      + เพิ่มข้อใหญ่
                     </button>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* --- Section รูปภาพประกอบ และชื่อภาพ (วางไว้ก่อนหมายเหตุ) --- */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-indigo-950/40 pb-2">
+            {/* --- รูปภาพประกอบ (แยกภาพตัวอย่างออกจากกรอบ Choose File โดยจัดวางเรียงเคียงกัน) --- */}
+            <div className="space-y-4 pt-4 border-t border-indigo-950/40">
+              <div className="flex items-center justify-between">
                 <h3 className="text-md font-bold text-indigo-300">รูปภาพประกอบ และชื่อภาพ</h3>
+                <button
+                  type="button"
+                  onClick={handleAddTermsImageRow}
+                  className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-400 rounded-full text-xs font-bold transition cursor-pointer"
+                >
+                  + เพิ่มรูปภาพ
+                </button>
               </div>
 
-              {termsImages.map((img, index) => {
-                const imgKey = img.tempId || img.id;
-                return (
-                  <div key={imgKey} className="bg-[#1e293b]/80 p-5 rounded-2xl border border-indigo-900/30 space-y-4 relative">
-                    <button 
-                      type="button" 
-                      onClick={() => handleRemoveTermsImageRow(index)} 
-                      className="absolute top-4 right-4 text-gray-500 hover:text-rose-500 cursor-pointer" 
-                      title="ลบรูปนี้"
-                    >
-                      ✕
-                    </button>
+              {termsImages.map((img, index) => (
+                <div key={img.id || img.tempId || index} className="bg-[#1e293b]/80 p-5 rounded-2xl border border-indigo-900/30 space-y-3 relative">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTermsImageRow(index)}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-rose-500 cursor-pointer"
+                    title="ลบรูปภาพนี้"
+                  >
+                    ✕
+                  </button>
 
-                    <div className="flex items-center gap-3 pr-10">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-900/40 border border-indigo-700/50 flex items-center justify-center shrink-0 shadow-inner">
-                        <span className="text-indigo-300 font-black text-sm">#{index + 1}</span>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="ชื่อภาพประกอบ (Caption)..."
-                        value={img.caption}
-                        onChange={(e) => handleTermsImageCaptionChange(index, e.target.value)}
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-[#0f172a] border border-indigo-950/60 text-white font-semibold focus:outline-none focus:border-indigo-500 text-sm"
-                      />
+                  <div className="flex items-center gap-3 pr-8">
+                    <div className="w-12 h-12 rounded-xl bg-indigo-900/40 border border-indigo-700/50 flex items-center justify-center shrink-0 shadow-inner">
+                      <span className="text-indigo-300 font-black text-sm">#{index + 1}</span>
                     </div>
+                    <input
+                      type="text"
+                      placeholder="ชื่อภาพประกอบ (Caption)..."
+                      value={img.caption}
+                      onChange={(e) => handleTermsImageCaptionChange(index, e.target.value)}
+                      className="flex-1 px-4 py-3 rounded-xl bg-[#0f172a] border border-indigo-950/60 text-white text-sm focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
 
-                    <div className="pl-0 sm:pl-13 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleTermsImageFileChange(index, e)}
-                        className="w-full sm:flex-1 px-4 py-2 rounded-xl bg-[#0f172a] border border-indigo-950/60 text-gray-300 file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer text-xs"
-                      />
+                  <div className="pl-0 sm:pl-15">
+                    <div className="flex items-center gap-4">
+                      {/* กรอบ Choose File */}
+                      <div className="flex-1 bg-[#0f172a] border border-indigo-950/60 rounded-xl px-4 py-2.5 flex items-center gap-3">
+                        <label className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg cursor-pointer transition shadow-md shrink-0">
+                          Choose File
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleTermsImageFileChange(index, e)}
+                            className="hidden"
+                          />
+                        </label>
+                        <span className="text-xs text-gray-400 truncate">
+                          {img.file ? img.file.name : 'No file chosen'}
+                        </span>
+                      </div>
+
+                      {/* ภาพตัวอย่าง (แยกออกมาอยู่นอกกรอบทางขวา) */}
                       {img.preview && (
                         <div className="shrink-0">
-                          <img src={img.preview} alt="Preview" className="w-24 h-14 object-cover rounded-lg border border-indigo-900/50 shadow" />
+                          <img src={img.preview} alt="Preview" className="h-12 w-20 sm:h-14 sm:w-24 rounded-lg border border-indigo-900/50 object-cover shadow" />
                         </div>
                       )}
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
 
-              <div className="flex justify-center pt-2">
-                <button 
-                  type="button" 
-                  onClick={handleAddTermsImageRow} 
-                  className="px-6 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-400 rounded-full text-xs font-bold transition cursor-pointer shadow-md"
-                >
-                  + เพิ่มรูปภาพประกอบ
-                </button>
-              </div>
+              {termsImages.length === 0 && (
+                <p className="text-xs text-gray-500 italic">ยังไม่มีรูปภาพประกอบ (สามารถกดปุ่มเพิ่มรูปภาพด้านบนได้)</p>
+              )}
             </div>
 
             <div className="bg-[#1e293b]/40 p-6 rounded-2xl border border-indigo-950/40 space-y-2">
@@ -790,6 +822,7 @@ export default function PoliceRulesCRUD() {
                 value={footerNote}
                 onChange={(e) => setFooterNote(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl bg-[#0f172a] border border-amber-500/30 text-amber-300 text-xs"
+                placeholder="หมายเหตุเพิ่มเติม..."
               />
             </div>
 
@@ -798,46 +831,6 @@ export default function PoliceRulesCRUD() {
               <button type="button" onClick={() => setView('table')} className="px-8 py-2.5 rounded-full font-bold text-white bg-rose-600 hover:bg-rose-500 cursor-pointer">Cancel</button>
             </div>
           </form>
-        </div>
-      )}
-
-      {/* --- POPUP MODAL FOR SELECT FORM TYPE --- */}
-      {isSelectModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-[#1e293b] border border-indigo-950/80 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-6">
-            <div className="text-center space-y-1">
-              <h3 className="text-xl font-bold text-white">เลือกรูปแบบข้อมูล</h3>
-              <p className="text-xs text-indigo-300">กรุณาเลือกประเภทรูปแบบที่คุณต้องการสร้าง</p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3">
-              <button
-                onClick={() => handleSelectFormType('terms')}
-                className="p-4 bg-[#0f172a] hover:bg-indigo-950/60 border border-indigo-900/50 hover:border-indigo-500 rounded-xl text-left transition space-y-1 cursor-pointer group shadow"
-              >
-                <h4 className="font-bold text-white text-base group-hover:text-indigo-300 transition">กฎ</h4>
-                <p className="text-xs text-gray-400">ฟอร์มกฎแบบมีหัวข้อหลัก กลุ่มย่อย ข้อ และข้อย่อยแบบลำดับชั้น</p>
-              </button>
-
-              <button
-                onClick={() => handleSelectFormType('police')}
-                className="p-4 bg-[#0f172a] hover:bg-indigo-950/60 border border-indigo-900/50 hover:border-indigo-500 rounded-xl text-left transition space-y-1 cursor-pointer group shadow"
-              >
-                <h4 className="font-bold text-white text-base group-hover:text-indigo-300 transition">ค่าปรับ</h4>
-                <p className="text-xs text-gray-400">ฟอร์มสำหรับกฎที่มีการระบุค่าปรับและเวลาจำคุก</p>
-              </button>
-            </div>
-
-            <div className="text-center pt-2">
-              <button
-                type="button"
-                onClick={() => setIsSelectModalOpen(false)}
-                className="px-6 py-2 rounded-full font-bold text-gray-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition cursor-pointer text-xs"
-              >
-                ยกเลิก
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
