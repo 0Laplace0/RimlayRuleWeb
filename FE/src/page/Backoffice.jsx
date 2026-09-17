@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { swalUtils } from '@/utils/swalUtils.js';
 
+import HomeCRUD from '@/components/backoffice/HomeCRUD';
 import ActivityRulesCRUD from '@/components/backoffice/ActivityRulesCRUD';
 import CountryRulesCRUD from '@/components/backoffice/CountryRulesCRUD';
 import RoleplayRulesCRUD from '@/components/backoffice/RoleplayRulesCRUD';
@@ -11,22 +12,27 @@ import StreamingPolicyCRUD from '@/components/backoffice/StreamingPolicyRulesCRU
 import SafezoneCRUD from '@/components/backoffice/SafezoneRulesCRUD';
 import PoliceCRUD from '@/components/backoffice/PoliceRulesCRUD';
 import DoctorRulesCRUD from '@/components/backoffice/DoctorRulesCRUD';
+import CouncilRulesCRUD from '@/components/backoffice/CouncilRulesCRUD';
 import ActivityLog from '@/components/backoffice/ActivityLog';
 
 const Backoffice = () => {
-  const [activeMenu, setActiveMenu] = useState('RoleplayRules');
+  // เปลี่ยนค่าเริ่มต้นเป็น 'ActivityLog'
+  const [activeMenu, setActiveMenu] = useState('ActivityLog');
 
+  // ย้าย ActivityLog ขึ้นมาเป็นอันแรก
   const sidebarMenus = [
+    { id: 'ActivityLog', name: '- Realtime Activity Log -' },
+    { id: 'Home', name: '- หน้าแรก -' },
     { id: 'CountryRules', name: '- จัดการกฎประเทศ -' },
     { id: 'ActivityRules', name: '- จัดการกฎกิจกรรม -' },
     { id: 'RoleplayRules', name: '- จัดการกฎ Roleplay -' },
     { id: 'PoliceRules', name: '- จัดการกฎตำรวจ/ค่าปรับ -' },
     { id: 'DoctorRules', name: '- จัดการกฎแพทย์/ค่ารักษา -' },
+    { id: 'CouncilRules', name: '- จัดการกฎสภา -' },
     { id: 'TermsRules', name: '- จัดการ Terms & Conditions -' },
     { id: 'RefundRules', name: '- จัดการ Refund Policy -' },
     { id: 'StreamingPolicy', name: '- จัดการ Streaming Policy -' },
     { id: 'Safezone', name: '- จัดการ Safezone -' },
-    { id: 'ActivityLog', name: '- Realtime Activity Log -' },
   ];
 
   const handleLogout = async () => {
@@ -50,6 +56,8 @@ const Backoffice = () => {
 
   const renderContent = () => {
     switch (activeMenu) {
+      case 'Home':
+        return <HomeCRUD />;
       case 'CountryRules':
         return <CountryRulesCRUD />;
       case 'ActivityRules':
@@ -60,6 +68,8 @@ const Backoffice = () => {
         return <PoliceCRUD />;
       case 'DoctorRules':
         return <DoctorRulesCRUD />;
+      case 'CouncilRules':
+        return <CouncilRulesCRUD />;
       case 'TermsRules':
         return <TermsRulesCRUD />;
       case 'RefundRules':

@@ -7,6 +7,7 @@ import Safezone from "./page/SafezoneRules.jsx";
 import RoleplayRules from "./page/RoleplayRules.jsx";
 import PoliceRules from "./page/PoliceRules.jsx";
 import DoctorRules from "./page/DoctorRules.jsx";
+import CouncilRules from "./page/CouncilRules.jsx";
 import TermsRules from "./page/TermsRules.jsx";
 import RefundRules from "./page/RefundRules.jsx";
 import StreamingPolicy from "./page/StreamingPolicyRules.jsx";
@@ -24,6 +25,7 @@ function App() {
       <Route path="/roleplay-rules" element={<RoleplayRules />} />
       <Route path="/police-rules" element={<PoliceRules />} />
       <Route path="/doctor-rules" element={<DoctorRules />} />
+      <Route path="/council-rules" element={<CouncilRules />} />
       <Route path="/terms-rules" element={<TermsRules />} />
       <Route path="/refund-rules" element={<RefundRules />} />
       <Route path="/streaming-policy-rules" element={<StreamingPolicy />} />

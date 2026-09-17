@@ -12,12 +12,15 @@ const Navbar = () => {
   const [rulesCategories, setRulesCategories] = useState([]);
   const [isLoadingRules, setIsLoadingRules] = useState(true);
 
-  // States สำหรับเก็บข้อมูล กฎหน่วยงาน (แยกอิสระแต่ละหน่วยงาน - ตำรวจ, หมอ)
+  // States สำหรับเก็บข้อมูล กฎหน่วยงาน (แยกอิสระแต่ละหน่วยงาน - ตำรวจ, หมอ, สภา)
   const [policeRules, setPoliceRules] = useState([]);
   const [isLoadingPolice, setIsLoadingPolice] = useState(true);
 
   const [doctorRules, setDoctorRules] = useState([]);
   const [isLoadingDoctor, setIsLoadingDoctor] = useState(true);
+
+  const [councilRules, setCouncilRules] = useState([]);
+  const [isLoadingCouncil, setIsLoadingCouncil] = useState(true);
   
   const countryDropdownRef = useRef(null);
   const agencyDropdownRef = useRef(null);
@@ -90,6 +93,29 @@ const Navbar = () => {
     };
 
     fetchDoctorRules();
+  }, []);
+
+  // Fetch กฎสภา
+  useEffect(() => {
+    const fetchCouncilRules = async () => {
+      try {
+        setIsLoadingCouncil(true);
+        const response = await fetch('http://localhost:5000/api/council-rules');
+        if (response.ok) {
+          const data = await response.json();
+          const categoriesArray = Array.isArray(data) ? data : (data.categories || data.data || []);
+          setCouncilRules(categoriesArray);
+        } else {
+          console.error('API Error Status (Council):', response.status);
+        }
+      } catch (err) {
+        console.error('Failed to fetch council rules:', err);
+      } finally {
+        setIsLoadingCouncil(false);
+      }
+    };
+
+    fetchCouncilRules();
   }, []);
 
   useEffect(() => {
@@ -300,7 +326,7 @@ const Navbar = () => {
                   </div>
 
                   {/* กฎหมอ */}
-                  <div className="py-2">
+                  <div className="py-2 border-b border-indigo-950/40">
                     <div className="w-full text-left px-4 py-1 text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
                       กฎหมอ
@@ -319,6 +345,32 @@ const Navbar = () => {
                             className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-indigo-300 hover:bg-indigo-950/30 rounded-lg transition-colors truncate cursor-pointer"
                           >
                             • {doctorItem.title}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* กฎสภา */}
+                  <div className="py-2">
+                    <div className="w-full text-left px-4 py-1 text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                      กฎสภา
+                    </div>
+                    <div className="pl-6 mt-1 space-y-1">
+                      {isLoadingCouncil ? (
+                        <div className="px-3 py-1 text-xs text-gray-500">กำลังโหลดหัวข้อ...</div>
+                      ) : councilRules.length === 0 ? (
+                        <div className="px-3 py-1 text-xs text-gray-500">ไม่มีข้อมูลหัวข้อ</div>
+                      ) : (
+                        councilRules.map((councilItem) => (
+                          <button
+                            type="button"
+                            key={`council-${councilItem.id}`}
+                            onClick={() => handleNavigateRule('/council-rules', councilItem.title, councilItem.id)}
+                            className="w-full text-left px-3 py-1.5 text-xs text-gray-400 hover:text-indigo-300 hover:bg-indigo-950/30 rounded-lg transition-colors truncate cursor-pointer"
+                          >
+                            • {councilItem.title}
                           </button>
                         ))
                       )}

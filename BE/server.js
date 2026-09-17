@@ -11,8 +11,9 @@ app.use(express.urlencoded({ extended: true }));
 // เปิดให้เข้าถึงไฟล์รูปภาพที่อัปโหลดได้ผ่าน URL
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Import Routes (ปรับชื่อตัวแปรให้ตรงกับตอนเรียกใช้งาน)
+// Import Routes
 const authRoutes = require('./routes/authRoutes');
+const homeRoutes = require('./routes/homeRoutes');
 const activityRuleRoutes = require('./routes/activityRuleRoutes');
 const countryRuleRoutes = require('./routes/countryRuleRoutes');
 const termsRuleRoutes = require('./routes/termsRuleRoutes');
@@ -22,9 +23,12 @@ const streamingPolicyRuleRoutes = require('./routes/streamingPolicyRuleRoutes');
 const safezoneRuleRoutes = require('./routes/safezoneRuleRoutes');
 const policeRuleRoutes = require('./routes/policeRuleRoutes'); 
 const doctorRuleRoutes = require('./routes/doctorRuleRoutes');
+const councilRuleRoutes = require('./routes/councilRuleRoutes');
+const activityLogRoutes = require('./routes/activityLogRoutes');
 
 // Use Routes
 app.use('/api/auth', authRoutes);
+app.use('/api', homeRoutes);
 app.use('/api', activityRuleRoutes); 
 app.use('/api', countryRuleRoutes);
 app.use('/api', termsRuleRoutes);
@@ -34,6 +38,8 @@ app.use('/api', streamingPolicyRuleRoutes);
 app.use('/api', safezoneRuleRoutes);
 app.use('/api', policeRuleRoutes);
 app.use('/api', doctorRuleRoutes);
+app.use('/api', councilRuleRoutes);
+app.use('/api/activity-logs', activityLogRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

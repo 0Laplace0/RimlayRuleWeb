@@ -1,0 +1,63 @@
+[
+  {
+    "id": "1789635725286",
+    "title": "กฎสภา",
+    "type": "rule",
+    "items": [],
+    "subGroups": [
+      {
+        "subTitle": "กฎสภา",
+        "rules": [
+          {
+            "text": "กฎสภา",
+            "subItems": [
+              {
+                "text": "กฎสภา"
+              },
+              {
+                "text": "กฎสภา"
+              }
+            ]
+          },
+          {
+            "text": "กฎสภา",
+            "subItems": [
+              {
+                "text": "กฎสภา"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "images": [
+      {
+        "id": "img_1789635725285_0",
+        "imageUrl": "/uploads/council-rules/council-1789635725279-513333662.jpg",
+        "caption": "กฎสภา"
+      }
+    ],
+    "footerNote": "กฎสภา",
+    "createdAt": "2026-09-17T09:02:05.286Z"
+  },
+  {
+    "id": "1789635916968",
+    "title": "ข้อมูล",
+    "type": "rule",
+    "items": [],
+    "subGroups": [
+      {
+        "subTitle": "ข้อมูล",
+        "rules": [
+          {
+            "text": "ข้อมูล",
+            "subItems": []
+          }
+        ]
+      }
+    ],
+    "images": [],
+    "footerNote": "",
+    "createdAt": "2026-09-17T09:05:16.968Z"
+  }
+]

@@ -3,11 +3,7 @@ import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 
 /**
- * Reusable Quill Editor Component
- * @param {Object} value - โครงสร้าง Delta JSON ของเนื้อหา
- * @param {Function} onChange - Callback ส่งคืน Delta ล่าสุดเมื่อมีการพิมพ์หรือจัดรูปแบบ
- * @param {string} placeholder - ข้อความ Placeholder
- * @param {boolean} readOnly - โหมดอ่านอย่างเดียว (ปิด Toolbar และการพิมพ์)
+ * Reusable Quill Editor Component (Dark Theme & StrictMode Safe)
  */
 export default function QuillEditor({
   value,
@@ -22,8 +18,13 @@ export default function QuillEditor({
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // เคลียร์DOM ป้องกันซ้ำซ้อนจาก Strict Mode
+    containerRef.current.innerHTML = '';
+    const editorDiv = document.createElement('div');
+    containerRef.current.appendChild(editorDiv);
+
     // 1. สร้าง Quill Instance
-    const quill = new Quill(containerRef.current, {
+    const quill = new Quill(editorDiv, {
       theme: 'snow',
       placeholder: placeholder,
       readOnly: readOnly,
@@ -31,8 +32,8 @@ export default function QuillEditor({
         toolbar: readOnly
           ? false
           : [
-              [{ header: [1, 2, 3, false] }],
               ['bold', 'italic', 'underline', 'strike'],
+              [{ color: [] }, { background: [] }],
               [{ list: 'ordered' }, { list: 'bullet' }],
               ['link', 'blockquote', 'code-block'],
               ['clean']
@@ -65,7 +66,7 @@ export default function QuillEditor({
     };
   }, []);
 
-  // รองรับกรณีที่ value มีการเปลี่ยนแปลงจากภายนอก (เช่น โหลดข้อมูล async จาก API)
+  // รองรับกรณีที่ value มีการเปลี่ยนแปลงจากภายนอก
   useEffect(() => {
     if (quillRef.current && value) {
       if (isInternalChangeRef.current) {
@@ -84,8 +85,48 @@ export default function QuillEditor({
   }, [readOnly]);
 
   return (
-    <div className="quill-editor-wrapper">
-      <div ref={containerRef} style={{ minHeight: '200px' }} />
-    </div>
+    <>
+      <style>{`
+        /* Dark Theme overrides for Quill */
+        .quill-dark-wrapper .ql-toolbar.ql-snow {
+          background-color: #1e293b;
+          border-color: rgba(99, 102, 241, 0.3) !important;
+          border-top-left-radius: 0.75rem;
+          border-top-right-radius: 0.75rem;
+        }
+        .quill-dark-wrapper .ql-container.ql-snow {
+          background-color: #0f172a;
+          border-color: rgba(99, 102, 241, 0.3) !important;
+          border-bottom-left-radius: 0.75rem;
+          border-bottom-right-radius: 0.75rem;
+          color: #ffffff;
+        }
+        .quill-dark-wrapper .ql-editor {
+          color: #ffffff !important;
+          min-height: 150px;
+        }
+        .quill-dark-wrapper .ql-editor.ql-blank::before {
+          color: rgba(148, 163, 184, 0.6) !important;
+          font-style: normal;
+        }
+        .quill-dark-wrapper .ql-snow .ql-stroke {
+          stroke: #cbd5e1;
+        }
+        .quill-dark-wrapper .ql-snow .ql-fill, .quill-dark-wrapper .ql-snow .ql-picker.ql-expanded .ql-picker-label {
+          fill: #cbd5e1;
+        }
+        .quill-dark-wrapper .ql-snow .ql-picker {
+          color: #cbd5e1;
+        }
+        .quill-dark-wrapper .ql-snow .ql-picker-options {
+          background-color: #1e293b;
+          color: #ffffff;
+          border-color: rgba(99, 102, 241, 0.3);
+        }
+      `}</style>
+      <div className="quill-dark-wrapper w-full">
+        <div ref={containerRef} />
+      </div>
+    </>
   );
 }

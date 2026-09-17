@@ -1,68 +1,109 @@
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import Navbar from '../components/Navbar';
 
 const Home = () => {
+  const [contentList, setContentList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+  useEffect(() => {
+    const fetchHomeData = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get(`${API_URL}/home?category=home`);
+        const responseData = res.data.data || res.data;
+        setContentList(Array.isArray(responseData) ? responseData : [responseData]);
+      } catch (err) {
+        console.error('Failed to fetch home data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHomeData();
+  }, [API_URL]);
+
+  // ฟังก์ชันแปลง rule text / textDelta รองรับสีและสไตล์ (Color, Bold, Italic)
+  const renderRuleText = (rule) => {
+    if (!rule) return '';
+    if (rule.textDelta && typeof rule.textDelta === 'object' && rule.textDelta.ops) {
+      return rule.textDelta.ops.map((o, idx) => {
+        const text = o.insert || '';
+        if (o.attributes && Object.keys(o.attributes).length > 0) {
+          const style = {};
+          if (o.attributes.color) style.color = o.attributes.color;
+          if (o.attributes.bold) style.fontWeight = 'bold';
+          if (o.attributes.italic) style.fontStyle = 'italic';
+          if (o.attributes.underline) style.textDecoration = 'underline';
+          return <span key={idx} style={style}>{text}</span>;
+        }
+        return text;
+      });
+    }
+    // กรณีเก็บบันทึกเป็น HTML string (เช่น rule.html)
+    if (rule.html) {
+      return <span dangerouslySetInnerHTML={{ __html: rule.html }} />;
+    }
+    return rule.text || rule.ruleText || '';
+  };
+
   return (
     <div className="min-h-screen bg-[#0d0d11] text-white flex flex-col w-full relative overflow-x-hidden">
       <Navbar />
 
-      {/* Hero Section */}
-      <div className="flex-1 w-full max-w-6xl mx-auto px-4 py-16 flex flex-col items-center justify-center text-center">
-        
-        {/* ป้ายประกาศต้อนรับเล็กๆ */}
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-950/60 border border-purple-500/30 text-purple-300 text-xs font-semibold mb-6 animate-pulse">
-          <span className="w-2 h-2 rounded-full bg-purple-400"></span>
-          ยินดีต้อนรับสู่คอมมูนิตี้ของเรา
-        </div>
+      <div className="flex-1 w-full max-w-4xl mx-auto px-4 py-12 space-y-10">
+        {loading ? (
+          <div className="text-center text-gray-400 py-20">กำลังโหลดข้อมูล...</div>
+        ) : contentList.length > 0 ? (
+          contentList.map((section, sIdx) => (
+            <div key={section.id || sIdx} className="space-y-6">
+              {/* หัวข้อหลัก */}
+              {section.title && (
+                <h1 className="text-2xl md:text-3xl font-bold text-center text-white mb-8">
+                  {section.title}
+                </h1>
+              )}
 
-        {/* หัวข้อหลัก */}
-        <h1 className="text-4xl md:text-6xl font-black tracking-wider text-white leading-tight">
-          RIMLAY <span className="text-purple-400">ROLEPLAY</span>
-        </h1>
+              {/* SubGroups / รายละเอียดแบบไม่มีกรอบ */}
+              <div className="text-gray-300 leading-relaxed space-y-6">
+                {section.subGroups && section.subGroups.length > 0 ? (
+                  section.subGroups.map((group, idx) => (
+                    <div key={idx} className="space-y-2">
+                      {group.subTitle && (
+                        <h3 className="text-base font-bold text-indigo-300 mt-4">
+                          {group.subTitle}
+                        </h3>
+                      )}
+                      
+                      {group.rules && group.rules.length > 0 ? (
+                        <ul className="list-disc pl-6 space-y-2 text-gray-200">
+                          {group.rules.map((rule, rIdx) => (
+                            <li key={rIdx} className="leading-relaxed whitespace-pre-wrap">
+                              {renderRuleText(rule)}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-center py-8">ยังไม่มีเนื้อหาประกาศในระบบ</p>
+                )}
+              </div>
 
-        <p className="mt-6 text-base md:text-lg text-gray-400 max-w-2xl leading-relaxed">
-          สัมผัสประสบการณ์การเล่นเกมแนว Roleplay รูปแบบใหม่ กฎระเบียบชัดเจน ระบบเสถียร 
-          และคอมมูนิตี้ที่เป็นกันเอง พร้อมให้คุณมาร่วมสร้างเรื่องราวไปกับเราแล้ววันนี้
-        </p>
-
-        {/* ปุ่มกดนำทาง */}
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-          <Link 
-            to="/country-rules" 
-            className="px-8 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold shadow-lg shadow-purple-900/50 transition-all duration-300 hover:-translate-y-0.5"
-          >
-            อ่านกฎประเทศ
-          </Link>
-          
-          <Link 
-            to="/rules" 
-            className="px-8 py-3 rounded-xl bg-[#14121a] hover:bg-[#1a1724] border border-purple-900/60 text-purple-300 font-bold transition-all duration-300 hover:-translate-y-0.5"
-          >
-            กฎระเบียบและกิจกรรม
-          </Link>
-        </div>
-
-        {/* การ์ดฟีเจอร์ย่อยด้านล่าง (ตัวอย่างเนื้อหา) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full mt-20 max-w-5xl">
-          <div className="bg-[#121019] border border-purple-950/80 p-6 rounded-2xl text-left space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-purple-900/40 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold">01</div>
-            <h3 className="text-lg font-bold text-purple-200">ระบบเสถียร</h3>
-            <p className="text-sm text-gray-400">เซิร์ฟเวอร์เปิดให้บริการตลอด 24 ชั่วโมง พร้อมทีมงานดูแลอย่างใกล้ชิด</p>
-          </div>
-
-          <div className="bg-[#121019] border border-purple-950/80 p-6 rounded-2xl text-left space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-purple-900/40 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold">02</div>
-            <h3 className="text-lg font-bold text-purple-200">กฎระเบียบชัดเจน</h3>
-            <p className="text-sm text-gray-400">ระบบการจัดการและบทลงโทษโปร่งใส ตรวจสอบได้ง่ายผ่านหน้าเว็บไซต์</p>
-          </div>
-
-          <div className="bg-[#121019] border border-purple-950/80 p-6 rounded-2xl text-left space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-purple-900/40 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold">03</div>
-            <h3 className="text-lg font-bold text-purple-200">คอมมูนิตี้อบอุ่น</h3>
-            <p className="text-sm text-gray-400">พบปะเพื่อนใหม่และสร้างสรรค์บทบาทตัวละครในแบบที่คุณต้องการ</p>
-          </div>
-        </div>
-
+              {/* Footer Note (หมายเหตุ) แบบกรอบสีเหลือง/ครีม */}
+              {section.footerNote && (
+                <div className="mt-8 px-4 py-3.5 rounded-xl bg-amber-50/95 border border-amber-300 text-amber-900 text-sm">
+                  <span className="font-semibold">หมายเหตุ: </span>
+                  {section.footerNote.replace(/^หมายเหตุ[:：]\s*/i, '')}
+                </div>
+              )}
+            </div>
+          ))
+        ) : (
+          <div className="text-center text-gray-500 py-25">ไม่พบข้อมูลหน้าแรก</div>
+        )}
       </div>
     </div>
   );
