@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logo from '@/assets/hero.png';
-import ProfileModal from './ProfileModal';
 
 const Navbar = () => {
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [isAgencyDropdownOpen, setIsAgencyDropdownOpen] = useState(false);
   
@@ -22,6 +20,14 @@ const Navbar = () => {
   const [councilRules, setCouncilRules] = useState([]);
   const [isLoadingCouncil, setIsLoadingCouncil] = useState(true);
   
+  // State จำลองสำหรับเก็บข้อมูลผู้ใช้งานระบบ (คุณสามารถผูกกับ Context/Redux/Zustand หรือระบบ Auth ของคุณได้)
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const userDropdownRef = useRef(null);
+
   const countryDropdownRef = useRef(null);
   const agencyDropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -45,7 +51,6 @@ const Navbar = () => {
         setIsLoadingRules(false);
       }
     };
-
     fetchRulesMenu();
   }, []);
 
@@ -68,7 +73,6 @@ const Navbar = () => {
         setIsLoadingPolice(false);
       }
     };
-
     fetchPoliceRules();
   }, []);
 
@@ -91,7 +95,6 @@ const Navbar = () => {
         setIsLoadingDoctor(false);
       }
     };
-
     fetchDoctorRules();
   }, []);
 
@@ -114,7 +117,6 @@ const Navbar = () => {
         setIsLoadingCouncil(false);
       }
     };
-
     fetchCouncilRules();
   }, []);
 
@@ -126,6 +128,9 @@ const Navbar = () => {
       if (agencyDropdownRef.current && !agencyDropdownRef.current.contains(event.target)) {
         setIsAgencyDropdownOpen(false);
       }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
+        setIsUserDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -135,6 +140,13 @@ const Navbar = () => {
     setIsCountryDropdownOpen(false);
     setIsAgencyDropdownOpen(false);
     navigate(path, { state: { categoryName, selectedMainId: mainId } });
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+    setIsUserDropdownOpen(false);
+    navigate('/');
   };
 
   return (
@@ -151,7 +163,7 @@ const Navbar = () => {
             />
           </Link>
 
-          {/* MENU & LOGIN BUTTON */}
+          {/* MENU */}
           <div className="flex items-center space-x-8 text-sm font-medium text-gray-300">
             
             <Link to="/" className="hover:text-indigo-400 transition-colors duration-200">
@@ -170,10 +182,7 @@ const Navbar = () => {
             >
               <button
                 type="button"
-                onClick={() => {
-                  setIsCountryDropdownOpen(false);
-                  navigate('/country-rules');
-                }}
+                onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)} // แก้ไม่ให้ Navigate ไปหน้าอื่นเมื่อกดปุ่มหลัก
                 className="flex items-center gap-2 hover:text-indigo-400 transition-colors duration-200 cursor-pointer focus:outline-none py-2"
               >
                 <span>กฎประเทศ</span>
@@ -190,6 +199,7 @@ const Navbar = () => {
               {isCountryDropdownOpen && (
                 <div className="absolute left-0 mt-0 w-72 bg-[#0f172a] border border-indigo-950/60 rounded-xl shadow-2xl py-3 z-50 backdrop-blur-md max-h-[80vh] overflow-y-auto animate-fadeIn">
                   
+                  {/* ปุ่มเมนูเข้าไปที่หน้ากฎประเทศรวม */}
                   <button
                     type="button"
                     onClick={() => {
@@ -279,10 +289,7 @@ const Navbar = () => {
             >
               <button
                 type="button"
-                onClick={() => {
-                  setIsAgencyDropdownOpen(false);
-                  navigate('/agency-rules');
-                }}
+                onClick={() => setIsAgencyDropdownOpen(!isAgencyDropdownOpen)} // แก้ไม่ให้ Navigate ไปหน้าอื่นเมื่อกดปุ่มหลัก
                 className="flex items-center gap-2 hover:text-indigo-400 transition-colors duration-200 cursor-pointer focus:outline-none py-2"
               >
                 <span>กฎหน่วยงาน</span>
@@ -389,33 +396,62 @@ const Navbar = () => {
               Refund Policy
             </Link>
 
-            <Link to="/backoffice" className="hover:text-indigo-400 transition-colors duration-200">
-              BackOffice
-            </Link>
+            {/* แสดง BackOffice เฉพาะเมื่อเข้าสู่ระบบและมี role เป็น admin */}
+            {user?.role === 'admin' && (
+              <Link to="/backoffice" className="hover:text-indigo-400 transition-colors duration-200">
+                BackOffice
+              </Link>
+            )}
 
-            <button
-              type="button"
-              onClick={() => setIsProfileOpen(true)}
-              className="hover:text-indigo-400 transition-colors duration-200 cursor-pointer"
-            >
-              Profile
-            </button>
-            
-            <Link 
-              to="/login" 
-              className="px-5 py-1.5 rounded-full bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600 hover:text-white hover:shadow-lg hover:shadow-indigo-600/30 transition-all duration-300 font-semibold"
-            >
-              เข้าสู่ระบบ
-            </Link>
+            {/* ส่วนของ Login / User Dropdown */}
+            {user ? (
+              <div 
+                className="relative" 
+                ref={userDropdownRef}
+              >
+                <button
+                  type="button"
+                  onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                  className="flex items-center gap-2 px-5 py-1.5 rounded-full bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600 hover:text-white hover:shadow-lg hover:shadow-indigo-600/30 transition-all duration-300 font-semibold"
+                >
+                  <span>{user.username || user.name || "ผู้ใช้งาน"}</span>
+                  <svg 
+                    className={`w-4 h-4 transition-transform duration-200 ${isUserDropdownOpen ? 'rotate-180' : ''}`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {isUserDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-[#0f172a] border border-indigo-950/60 rounded-xl shadow-2xl py-2 z-50 animate-fadeIn">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-indigo-950/40 hover:text-red-300 transition-colors cursor-pointer flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      ออกจากระบบ
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link 
+                to="/login" 
+                className="px-5 py-1.5 rounded-full bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-600 hover:text-white hover:shadow-lg hover:shadow-indigo-600/30 transition-all duration-300 font-semibold"
+              >
+                เข้าสู่ระบบ
+              </Link>
+            )}
+
           </div>
-
         </div>
       </nav>
-
-      <ProfileModal 
-        isOpen={isProfileOpen} 
-        onClose={() => setIsProfileOpen(false)} 
-      />
     </div>
   );
 };

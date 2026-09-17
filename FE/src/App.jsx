@@ -1,18 +1,18 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import Home from "./page/Home.jsx";
-import CountryRules from './page/CountryRules.jsx';
-import ActivityRulesView from './page/ActivityRulesView.jsx';
-import ActivityRules from "./page/ActivityRules.jsx";
-import Safezone from "./page/SafezoneRules.jsx";
-import RoleplayRules from "./page/RoleplayRules.jsx";
-import PoliceRules from "./page/PoliceRules.jsx";
-import DoctorRules from "./page/DoctorRules.jsx";
-import CouncilRules from "./page/CouncilRules.jsx";
-import TermsRules from "./page/TermsRules.jsx";
-import RefundRules from "./page/RefundRules.jsx";
-import StreamingPolicy from "./page/StreamingPolicyRules.jsx";
-import Backoffice from "./page/Backoffice.jsx";
-// import Login from "./page/Login.jsx";
+import Home from "@/page/Home.jsx";
+import CountryRules from '@/page/CountryRules.jsx';
+import ActivityRulesView from '@/page/ActivityRulesView.jsx';
+import ActivityRules from "@/page/ActivityRules.jsx";
+import Safezone from "@/page/SafezoneRules.jsx";
+import RoleplayRules from "@/page/RoleplayRules.jsx";
+import PoliceRules from "@/page/PoliceRules.jsx";
+import DoctorRules from "@/page/DoctorRules.jsx";
+import CouncilRules from "@/page/CouncilRules.jsx";
+import TermsRules from "@/page/TermsRules.jsx";
+import RefundRules from "@/page/RefundRules.jsx";
+import StreamingPolicy from "@/page/StreamingPolicyRules.jsx";
+import Backoffice from "@/page/Backoffice.jsx";
+import Login from "@/page/Login.jsx";
 
 function App() {
   return (
@@ -30,7 +30,7 @@ function App() {
       <Route path="/refund-rules" element={<RefundRules />} />
       <Route path="/streaming-policy-rules" element={<StreamingPolicy />} />
       <Route path="/backoffice" element={<Backoffice />} />
-      {/* <Route path="/login" element={<Login />} /> */}
+      <Route path="/login" element={<Login />} />
       
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

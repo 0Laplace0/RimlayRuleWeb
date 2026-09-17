@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { swalUtils } from '../../utils/swalUtils.js';
+import { swalUtils } from '../utils/swalUtils.js';
 
 const Login = ({ onLoginSuccess }) => {
   const [form, setForm] = useState({ identifier: '', password: '' });
