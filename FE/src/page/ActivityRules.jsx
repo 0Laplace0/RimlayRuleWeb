@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import Banner from '../components/Banner';
 
 const ActivityRules = () => {
   const location = useLocation();
@@ -106,6 +107,7 @@ const ActivityRules = () => {
   return (
     <div className="min-h-screen bg-[#0d0d11] text-white flex flex-col w-full relative">
       <Navbar />
+      <Banner />
 
       <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 flex flex-col items-center">
         {loading && <p className="text-[#80deea] animate-pulse mt-10">กำลังโหลดข้อมูลกฎระเบียบ...</p>}

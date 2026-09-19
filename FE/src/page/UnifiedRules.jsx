@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import Banner from '../components/Banner';
 
 export default function UnifiedRules({
   apiUrl = 'http://localhost:5000/api/default-rules',
@@ -260,6 +261,7 @@ export default function UnifiedRules({
   return (
     <div className="min-h-screen bg-gray-50 pb-16 text-gray-800 flex flex-col w-full relative">
       <Navbar />
+      <Banner />
 
       <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 flex flex-col items-center">
         {loading && <div className="text-center py-10 text-gray-500">กำลังโหลดข้อมูล...</div>}

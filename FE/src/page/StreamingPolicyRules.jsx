@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import Banner from '../components/Banner';
 
 export default function StreamingPolicy() {
   const [policyData, setPolicyData] = useState(null);
@@ -118,6 +119,7 @@ export default function StreamingPolicy() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
+      <Banner />
 
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         

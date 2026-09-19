@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import Banner from '../components/Banner';
 
 export default function Safezone() {
   const [safezones, setSafezones] = useState([]);
@@ -37,6 +38,7 @@ export default function Safezone() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
+      <Banner />
       <div className="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
         
         {/* Header: หัวข้อกลาง รายละเอียดและบทลงโทษชิดซ้าย */}

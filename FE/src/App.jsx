@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Home from "@/page/Home.jsx";
 import CountryRules from '@/page/CountryRules.jsx';
-import ActivityRulesView from '@/page/ActivityRulesView.jsx';
 import ActivityRules from "@/page/ActivityRules.jsx";
 import Safezone from "@/page/SafezoneRules.jsx";
 import RoleplayRules from "@/page/RoleplayRules.jsx";
@@ -20,7 +19,6 @@ function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/country-rules" element={<CountryRules />} />
-      <Route path="/activity-rules-view" element={<ActivityRulesView />} />
       <Route path="/activity-rules" element={<ActivityRules />} />
       <Route path="/safezone-rules" element={<Safezone />} />
       <Route path="/roleplay-rules" element={<RoleplayRules />} />

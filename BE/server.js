@@ -25,6 +25,7 @@ const policeRuleRoutes = require('./routes/policeRuleRoutes');
 const doctorRuleRoutes = require('./routes/doctorRuleRoutes');
 const councilRuleRoutes = require('./routes/councilRuleRoutes');
 const activityLogRoutes = require('./routes/activityLogRoutes');
+const bannerRoutes = require('./routes/bannerRoutes');
 
 // Use Routes
 app.use('/api/auth', authRoutes);
@@ -40,6 +41,7 @@ app.use('/api', policeRuleRoutes);
 app.use('/api', doctorRuleRoutes);
 app.use('/api', councilRuleRoutes);
 app.use('/api/activity-logs', activityLogRoutes);
+app.use('/api/banners', bannerRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

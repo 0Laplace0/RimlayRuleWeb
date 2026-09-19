@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import Banner from '../components/Banner';
 
 const Home = () => {
   const [contentList, setContentList] = useState([]);
@@ -28,17 +29,14 @@ const Home = () => {
   const renderRuleText = (rule) => {
     if (!rule) return '';
 
-    // ดึงค่า Delta Object จาก rule.textDelta หรือตัวแปรอื่นๆ ที่อาจจะส่งมา
     let deltaObj = rule.textDelta || rule.description || rule.penalty || rule;
 
-    // 1. ถ้าส่งมาเป็น JSON String ให้พยายาม JSON.parse ก่อน
     if (typeof deltaObj === 'string') {
       const trimmed = deltaObj.trim();
       if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
         try {
           deltaObj = JSON.parse(trimmed);
         } catch (e) {
-          // หาก parse ไม่ผ่าน ให้แสดงเป็นข้อความธรรมดา
           return deltaObj;
         }
       } else {
@@ -46,12 +44,10 @@ const Home = () => {
       }
     }
 
-    // 2. ถ้าเป็น Delta Object ที่มีโครงสร้าง { ops: [...] }
     if (deltaObj && typeof deltaObj === 'object' && Array.isArray(deltaObj.ops)) {
       return deltaObj.ops.map((o, idx) => {
         const text = o.insert || '';
         
-        // ถ้าเป็นอักขระขึ้นบรรทัดใหม่ธรรมดา
         if (typeof text === 'string' && text === '\n') {
           return null;
         }
@@ -59,16 +55,13 @@ const Home = () => {
         if (o.attributes && Object.keys(o.attributes).length > 0) {
           const style = {};
           
-          // ตัวอักษร
           if (o.attributes.color) style.color = o.attributes.color;
           if (o.attributes.bold) style.fontWeight = 'bold';
           if (o.attributes.italic) style.fontStyle = 'italic';
           
-          // ไฮไลต์ / สีพื้นหลัง (Quill ใช้ background หรือบางเจ้าอาจใช้ bg)
           if (o.attributes.background) style.backgroundColor = o.attributes.background;
           if (o.attributes.bg) style.backgroundColor = o.attributes.bg;
 
-          // เส้นใต้ / ขีดฆ่า
           const textDecorations = [];
           if (o.attributes.underline) textDecorations.push('underline');
           if (o.attributes.strike) textDecorations.push('line-through');
@@ -86,20 +79,19 @@ const Home = () => {
       });
     }
 
-    // 3. กรณีเก็บบันทึกเป็น HTML string (เช่น rule.html)
     if (rule.html) {
       return <span dangerouslySetInnerHTML={{ __html: rule.html }} />;
     }
 
-    // 4. Fallback สำหรับข้อความธรรมดา
     return rule.text || rule.ruleText || (typeof rule === 'string' ? rule : '');
   };
 
   return (
     <div className="min-h-screen bg-[#0d0d11] text-white flex flex-col w-full relative overflow-x-hidden">
       <Navbar />
+      <Banner />
 
-      <div className="flex-1 w-full max-w-4xl mx-auto px-4 py-12 space-y-10">
+      <div className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 space-y-10 relative z-10">
         {loading ? (
           <div className="text-center text-gray-400 py-20">กำลังโหลดข้อมูล...</div>
         ) : contentList.length > 0 ? (

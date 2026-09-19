@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import Banner from '../components/Banner';
 
 export default function RoleplayRules() {
   const [rulesData, setRulesData] = useState([]);
@@ -83,6 +84,7 @@ export default function RoleplayRules() {
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
       <Navbar />
+      <Banner />
       <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
         
         {/* หัวข้อหน้า */}

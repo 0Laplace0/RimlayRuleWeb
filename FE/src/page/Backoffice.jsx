@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Navbar from '@/components/Navbar';
 import { swalUtils } from '@/utils/swalUtils.js';
 
+import BannerCRUD from '@/components/backoffice/BannerCRUD';
 import HomeCRUD from '@/components/backoffice/HomeCRUD';
 import ActivityRulesCRUD from '@/components/backoffice/ActivityRulesCRUD';
 import CountryRulesCRUD from '@/components/backoffice/CountryRulesCRUD';
@@ -17,11 +18,11 @@ import ActivityLog from '@/components/backoffice/ActivityLog';
 
 const Backoffice = () => {
   // เปลี่ยนค่าเริ่มต้นเป็น 'ActivityLog'
-  const [activeMenu, setActiveMenu] = useState('ActivityLog');
+  const [activeMenu, setActiveMenu] = useState('Banner');
 
   // ย้าย ActivityLog ขึ้นมาเป็นอันแรก
   const sidebarMenus = [
-    { id: 'ActivityLog', name: '- Realtime Activity Log -' },
+    { id: 'Banner', name: '- จัดการแบนเนอร์ -' },
     { id: 'Home', name: '- หน้าแรก -' },
     { id: 'CountryRules', name: '- จัดการกฎประเทศ -' },
     { id: 'ActivityRules', name: '- จัดการกฎกิจกรรม -' },
@@ -56,6 +57,8 @@ const Backoffice = () => {
 
   const renderContent = () => {
     switch (activeMenu) {
+      case 'Banner':
+        return <BannerCRUD />;
       case 'Home':
         return <HomeCRUD />;
       case 'CountryRules':
@@ -78,8 +81,6 @@ const Backoffice = () => {
         return <StreamingPolicyCRUD />;
       case 'Safezone':
         return <SafezoneCRUD />;
-      case 'ActivityLog':
-        return <ActivityLog />;
       default:
         return (
           <div className="text-center py-24 text-gray-500">
