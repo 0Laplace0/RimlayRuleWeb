@@ -24,28 +24,75 @@ const Home = () => {
     fetchHomeData();
   }, [API_URL]);
 
-  // ฟังก์ชันแปลง rule text / textDelta รองรับสีและสไตล์ (Color, Bold, Italic)
+  // ฟังก์ชันแปลง rule text / textDelta รองรับ JSON String, Delta Object และการแต่งสไตล์ทั้งหมด (รวม Highlight)
   const renderRuleText = (rule) => {
     if (!rule) return '';
-    if (rule.textDelta && typeof rule.textDelta === 'object' && rule.textDelta.ops) {
-      return rule.textDelta.ops.map((o, idx) => {
+
+    // ดึงค่า Delta Object จาก rule.textDelta หรือตัวแปรอื่นๆ ที่อาจจะส่งมา
+    let deltaObj = rule.textDelta || rule.description || rule.penalty || rule;
+
+    // 1. ถ้าส่งมาเป็น JSON String ให้พยายาม JSON.parse ก่อน
+    if (typeof deltaObj === 'string') {
+      const trimmed = deltaObj.trim();
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          deltaObj = JSON.parse(trimmed);
+        } catch (e) {
+          // หาก parse ไม่ผ่าน ให้แสดงเป็นข้อความธรรมดา
+          return deltaObj;
+        }
+      } else {
+        return deltaObj;
+      }
+    }
+
+    // 2. ถ้าเป็น Delta Object ที่มีโครงสร้าง { ops: [...] }
+    if (deltaObj && typeof deltaObj === 'object' && Array.isArray(deltaObj.ops)) {
+      return deltaObj.ops.map((o, idx) => {
         const text = o.insert || '';
+        
+        // ถ้าเป็นอักขระขึ้นบรรทัดใหม่ธรรมดา
+        if (typeof text === 'string' && text === '\n') {
+          return null;
+        }
+
         if (o.attributes && Object.keys(o.attributes).length > 0) {
           const style = {};
+          
+          // ตัวอักษร
           if (o.attributes.color) style.color = o.attributes.color;
           if (o.attributes.bold) style.fontWeight = 'bold';
           if (o.attributes.italic) style.fontStyle = 'italic';
-          if (o.attributes.underline) style.textDecoration = 'underline';
-          return <span key={idx} style={style}>{text}</span>;
+          
+          // ไฮไลต์ / สีพื้นหลัง (Quill ใช้ background หรือบางเจ้าอาจใช้ bg)
+          if (o.attributes.background) style.backgroundColor = o.attributes.background;
+          if (o.attributes.bg) style.backgroundColor = o.attributes.bg;
+
+          // เส้นใต้ / ขีดฆ่า
+          const textDecorations = [];
+          if (o.attributes.underline) textDecorations.push('underline');
+          if (o.attributes.strike) textDecorations.push('line-through');
+          if (textDecorations.length > 0) {
+            style.textDecoration = textDecorations.join(' ');
+          }
+
+          return (
+            <span key={idx} style={style}>
+              {text}
+            </span>
+          );
         }
         return text;
       });
     }
-    // กรณีเก็บบันทึกเป็น HTML string (เช่น rule.html)
+
+    // 3. กรณีเก็บบันทึกเป็น HTML string (เช่น rule.html)
     if (rule.html) {
       return <span dangerouslySetInnerHTML={{ __html: rule.html }} />;
     }
-    return rule.text || rule.ruleText || '';
+
+    // 4. Fallback สำหรับข้อความธรรมดา
+    return rule.text || rule.ruleText || (typeof rule === 'string' ? rule : '');
   };
 
   return (
