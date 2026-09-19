@@ -17,7 +17,6 @@ export default function StreamingPolicy() {
       setLoading(true);
       const res = await axios.get('http://localhost:5000/api/streaming-policies');
       
-      // ค้นหาข้อมูลที่เป็น category streaming หรือเลือกรายการแรก
       const found = res.data.find((item) => item.category === 'streaming') || res.data[0];
       
       if (found) {
@@ -31,6 +30,49 @@ export default function StreamingPolicy() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // --- เพิ่มฟังก์ชันแปลง Delta/Text เป็น JSX ---
+  const renderFormattedContent = (rule) => {
+    const raw = rule.textDelta || rule.text;
+    if (!raw) return '';
+
+    let deltaObj = raw;
+    if (typeof raw === 'string' && raw.trim().startsWith('{')) {
+      try {
+        deltaObj = JSON.parse(raw);
+      } catch (e) {
+        return raw; // กรณีเป็น string ปกติ
+      }
+    }
+
+    if (deltaObj && Array.isArray(deltaObj.ops)) {
+      return deltaObj.ops.map((op, idx) => {
+        if (typeof op.insert !== 'string') return null;
+        const attrs = op.attributes || {};
+
+        // เตรียม Inline Style สำหรับสีฟอนต์และพื้นหลัง
+        const style = {};
+        if (attrs.color) style.color = attrs.color;
+        if (attrs.background) style.backgroundColor = attrs.background;
+
+        return (
+          <span
+            key={idx}
+            style={style}
+            className={`
+              ${attrs.bold ? 'font-bold' : ''} 
+              ${attrs.italic ? 'italic' : ''} 
+              ${attrs.underline ? 'underline' : ''}
+            `}
+          >
+            {op.insert}
+          </span>
+        );
+      });
+    }
+
+    return String(raw);
   };
 
   const renderPenaltyBadge = (penaltyValue) => {
@@ -75,12 +117,11 @@ export default function StreamingPolicy() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* เรียกใช้งาน Navbar */}
       <Navbar />
 
       <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         
-        {/* หัวข้อหลัก (เอา Breadcrumb ออกแล้ว) */}
+        {/* หัวข้อหลัก */}
         <div className="text-center pb-8 border-b border-gray-200 mb-10 pt-4">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
             {policyData.title}
@@ -100,8 +141,8 @@ export default function StreamingPolicy() {
                 {group.rules && group.rules.map((rule, ruleIdx) => (
                   <div key={ruleIdx} className="space-y-1">
                     {renderPenaltyBadge(rule.penaltyValue)}
-                    <p className="text-gray-700 leading-relaxed text-base sm:text-lg">
-                      {rule.text}
+                    <p className="text-gray-700 leading-relaxed text-base sm:text-lg whitespace-pre-wrap">
+                      {renderFormattedContent(rule)}
                     </p>
                   </div>
                 ))}

@@ -10,9 +10,17 @@ const RefundRulesCRUD = () => {
   const API_URL = 'http://localhost:5000/api/refund';
   const token = localStorage.getItem('token');
 
-  // --- Helper function สำหรับแปลง Text ธรรมดาให้เป็น Quill Delta ---
+  // --- Helper function สำหรับแปลง Text หรือ JSON String ให้เป็น Quill Delta ---
   const normalizeDelta = (val) => {
     if (!val) return { ops: [{ insert: '' }] };
+    if (typeof val === 'string' && val.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(val);
+        if (parsed && parsed.ops) return parsed;
+      } catch (e) {
+        // ignore parse error, treat as text
+      }
+    }
     if (typeof val === 'object' && val.ops) return val;
     return { ops: [{ insert: String(val) }] };
   };
@@ -230,12 +238,22 @@ const RefundRulesCRUD = () => {
     try {
       const formattedSubGroups = form.subGroups.map(sg => ({
         subTitle: sg.subTitle || sg.sub_title || sg.name || '',
-        rules: (sg.rules || sg.items || []).map(r => ({
-          textDelta: r.textDelta || { ops: [{ insert: '' }] },
-          subItems: (r.subItems || r.sub_items || []).map(si => ({
-            textDelta: si.textDelta || { ops: [{ insert: '' }] }
-          }))
-        }))
+        rules: (sg.rules || sg.items || []).map(r => {
+          const delta = r.textDelta || { ops: [{ insert: '' }] };
+          return {
+            ruleId: r.ruleId || r.id || undefined,
+            textDelta: delta,
+            text: typeof delta === 'object' ? JSON.stringify(delta) : String(delta || ''),
+            subItems: (r.subItems || r.sub_items || []).map(si => {
+              const siDelta = si.textDelta || { ops: [{ insert: '' }] };
+              return {
+                subItemId: si.subItemId || si.id || undefined,
+                textDelta: siDelta,
+                text: typeof siDelta === 'object' ? JSON.stringify(siDelta) : String(siDelta || '')
+              };
+            })
+          };
+        })
       }));
 
       const payload = {

@@ -32,11 +32,9 @@ export default function QuillEditor({
         toolbar: readOnly
           ? false
           : [
-              ['bold', 'italic', 'underline', 'strike'],
+              ['bold', 'underline'],
               [{ color: [] }, { background: [] }],
-              [{ list: 'ordered' }, { list: 'bullet' }],
-              ['link', 'blockquote', 'code-block'],
-              ['clean']
+              ['link']
             ]
       }
     });

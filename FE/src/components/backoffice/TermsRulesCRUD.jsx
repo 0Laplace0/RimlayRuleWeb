@@ -10,10 +10,18 @@ const TermsRulesCRUD = () => {
   const API_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/terms` : 'http://localhost:5000/api/terms';
   const token = localStorage.getItem('token');
 
-  // --- Helper function สำหรับแปลง Text ธรรมดาให้เป็น Quill Delta ---
+  // --- Helper function สำหรับแปลง Text / JSON String ให้เป็น Quill Delta ---
   const normalizeDelta = (val) => {
     if (!val) return { ops: [{ insert: '' }] };
     if (typeof val === 'object' && val.ops) return val;
+    if (typeof val === 'string' && val.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(val);
+        if (parsed && parsed.ops) return parsed;
+      } catch (e) {
+        // fallback to plain insert string
+      }
+    }
     return { ops: [{ insert: String(val) }] };
   };
 
@@ -224,7 +232,7 @@ const TermsRulesCRUD = () => {
     }));
   };
 
-  // --- Submit Handler ---
+  // --- Submit Handler & Payload Serialization ---
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -243,21 +251,38 @@ const TermsRulesCRUD = () => {
     if (!isConfirmed) return;
 
     try {
-      const formattedSubGroups = form.subGroups.map(sg => ({
-        subTitle: sg.subTitle || sg.sub_title || sg.name || '',
-        rules: (sg.rules || sg.items || []).map(r => ({
-          textDelta: r.textDelta || { ops: [{ insert: '' }] },
-          subItems: (r.subItems || r.sub_items || []).map(si => ({
-            textDelta: si.textDelta || { ops: [{ insert: '' }] }
-          }))
-        }))
-      }));
+      const formattedSubGroups = form.subGroups.map(sg => {
+        const cleanSubId = sg.subId && !String(sg.subId).startsWith('temp_') ? sg.subId : undefined;
+        return {
+          ...(cleanSubId && { subId: cleanSubId, id: cleanSubId }),
+          subTitle: sg.subTitle || sg.sub_title || sg.name || '',
+          rules: (sg.rules || sg.items || []).map(r => {
+            const cleanRuleId = r.ruleId && !String(r.ruleId).startsWith('temp_') ? r.ruleId : undefined;
+            const deltaObj = r.textDelta || { ops: [{ insert: '' }] };
+            return {
+              ...(cleanRuleId && { ruleId: cleanRuleId, id: cleanRuleId }),
+              textDelta: deltaObj,
+              text: typeof deltaObj === 'object' ? JSON.stringify(deltaObj) : String(deltaObj || ''),
+              subItems: (r.subItems || r.sub_items || []).map(si => {
+                const cleanSubItemId = si.subItemId && !String(si.subItemId).startsWith('temp_') ? si.subItemId : undefined;
+                const siDeltaObj = si.textDelta || { ops: [{ insert: '' }] };
+                return {
+                  ...(cleanSubItemId && { subItemId: cleanSubItemId, id: cleanSubItemId }),
+                  textDelta: siDeltaObj,
+                  text: typeof siDeltaObj === 'object' ? JSON.stringify(siDeltaObj) : String(siDeltaObj || '')
+                };
+              })
+            };
+          })
+        };
+      });
 
       const payload = {
         title: form.title,
         footerNote: form.footerNote,
         footer_note: form.footerNote,
-        subGroups: formattedSubGroups
+        subGroups: formattedSubGroups,
+        subcategories: formattedSubGroups
       };
 
       const config = { headers: { Authorization: `Bearer ${token}` } };
