@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { swalUtils } from '../../utils/swalUtils.js';
 import Pagination from '../Pagination';
+import QuillEditor from '../QuillEditor.jsx';
 
 export default function CouncilRulesCRUD() {
   // --- STATES ---
@@ -19,7 +20,7 @@ export default function CouncilRulesCRUD() {
   const [title, setTitle] = useState('');
   const [footerNote, setFooterNote] = useState('');
   
-  // SubGroups (มี subItems สำหรับระเบียบ/ข้อบังคับสภา)
+  // SubGroups (มี subItems ใช้ textDelta และ QuillEditor ทั้งข้อใหญ่และข้อย่อย)
   const [subGroups, setSubGroups] = useState([
     { 
       subId: `temp_${Date.now()}`, 
@@ -27,7 +28,7 @@ export default function CouncilRulesCRUD() {
       rules: [
         { 
           ruleId: `temp_${Date.now()}`, 
-          text: '', 
+          textDelta: { ops: [{ insert: '' }] }, 
           subItems: [] 
         }
       ] 
@@ -36,6 +37,13 @@ export default function CouncilRulesCRUD() {
 
   // Images State (สำหรับรูปภาพประกอบกฎสภา)
   const [images, setImages] = useState([]);
+
+  // --- Helper function สำหรับแปลง Text/Delta ---
+  const normalizeDelta = (val) => {
+    if (!val) return { ops: [{ insert: '' }] };
+    if (typeof val === 'object' && val.ops) return val;
+    return { ops: [{ insert: String(val) }] };
+  };
 
   const getAuthHeader = () => {
     const token = localStorage.getItem('token');
@@ -64,7 +72,11 @@ export default function CouncilRulesCRUD() {
     setEditingId(null);
     setTitle('');
     setFooterNote('');
-    setSubGroups([{ subId: `temp_${Date.now()}`, subTitle: '', rules: [{ ruleId: `temp_${Date.now()}`, text: '', subItems: [] }] }]);
+    setSubGroups([{ 
+      subId: `temp_${Date.now()}`, 
+      subTitle: '', 
+      rules: [{ ruleId: `temp_${Date.now()}`, textDelta: { ops: [{ insert: '' }] }, subItems: [] }] 
+    }]);
     setImages([]);
     setView('table');
   };
@@ -81,18 +93,22 @@ export default function CouncilRulesCRUD() {
 
     const rawSubGroups = category.subGroups || category.sub_groups || [];
     const mappedSubGroups = rawSubGroups.map(sg => ({
-      subId: sg.subId || sg.id || `temp_${Date.now()}`,
+      subId: sg.subId || sg.id || `temp_${Date.now()}_${Math.random()}`,
       subTitle: sg.subTitle || sg.sub_title || sg.name || '',
       rules: (sg.rules || sg.items || []).map(r => ({
-        ruleId: r.ruleId || r.id || `temp_${Date.now()}`,
-        text: r.text || r.rule_text || '',
+        ruleId: r.ruleId || r.id || `temp_${Date.now()}_${Math.random()}`,
+        textDelta: normalizeDelta(r.textDelta || r.text),
         subItems: (r.subItems || r.sub_items || []).map(si => ({
-          subItemId: si.subItemId || si.id || `temp_${Date.now()}`,
-          text: si.text || si.content || ''
+          subItemId: si.subItemId || si.id || `temp_${Date.now()}_${Math.random()}`,
+          textDelta: normalizeDelta(si.textDelta || si.text)
         }))
       }))
     }));
-    setSubGroups(mappedSubGroups.length > 0 ? mappedSubGroups : [{ subId: `temp_${Date.now()}`, subTitle: '', rules: [] }]);
+    setSubGroups(mappedSubGroups.length > 0 ? mappedSubGroups : [{ 
+      subId: `temp_${Date.now()}`, 
+      subTitle: '', 
+      rules: [{ ruleId: `temp_${Date.now()}`, textDelta: { ops: [{ insert: '' }] }, subItems: [] }] 
+    }]);
 
     // Map รูปภาพประกอบ
     const copiedImages = (category.images || []).map(img => ({
@@ -138,8 +154,10 @@ export default function CouncilRulesCRUD() {
     const formattedSubGroups = subGroups.map(sg => ({
       subTitle: sg.subTitle || '',
       rules: (sg.rules || []).map(r => ({
-        text: r.text || '',
-        subItems: (r.subItems || []).map(si => ({ text: si.text || '' }))
+        textDelta: r.textDelta || { ops: [{ insert: '' }] },
+        subItems: (r.subItems || []).map(si => ({
+          textDelta: si.textDelta || { ops: [{ insert: '' }] }
+        }))
       }))
     }));
 
@@ -198,7 +216,11 @@ export default function CouncilRulesCRUD() {
   const handleAddSubGroup = () => {
     setSubGroups([
       ...subGroups, 
-      { subId: `temp_${Date.now()}`, subTitle: '', rules: [{ ruleId: `temp_${Date.now()}`, text: '', subItems: [] }] }
+      { 
+        subId: `temp_${Date.now()}_${Math.random()}`, 
+        subTitle: '', 
+        rules: [{ ruleId: `temp_rule_${Date.now()}_${Math.random()}`, textDelta: { ops: [{ insert: '' }] }, subItems: [] }] 
+      }
     ]);
   };
   const handleRemoveSubGroup = (subId) => {
@@ -212,7 +234,7 @@ export default function CouncilRulesCRUD() {
       if (sg.subId === subId) {
         return {
           ...sg,
-          rules: [...sg.rules, { ruleId: `temp_${Date.now()}`, text: '', subItems: [] }]
+          rules: [...sg.rules, { ruleId: `temp_rule_${Date.now()}_${Math.random()}`, textDelta: { ops: [{ insert: '' }] }, subItems: [] }]
         };
       }
       return sg;
@@ -226,12 +248,12 @@ export default function CouncilRulesCRUD() {
       return sg;
     }));
   };
-  const handleUpdateRuleText = (subId, ruleId, value) => {
+  const handleUpdateRuleDelta = (subId, ruleId, delta) => {
     setSubGroups(subGroups.map(sg => {
       if (sg.subId === subId) {
         return {
           ...sg,
-          rules: sg.rules.map(r => r.ruleId === ruleId ? { ...r, text: value } : r)
+          rules: sg.rules.map(r => r.ruleId === ruleId ? { ...r, textDelta: delta } : r)
         };
       }
       return sg;
@@ -242,7 +264,10 @@ export default function CouncilRulesCRUD() {
       if (sg.subId === subId) {
         return {
           ...sg,
-          rules: sg.rules.map(r => r.ruleId === ruleId ? { ...r, subItems: [...r.subItems, { subItemId: `temp_${Date.now()}`, text: '' }] } : r)
+          rules: sg.rules.map(r => r.ruleId === ruleId ? { 
+            ...r, 
+            subItems: [...r.subItems, { subItemId: `temp_subitem_${Date.now()}_${Math.random()}`, textDelta: { ops: [{ insert: '' }] } }] 
+          } : r)
         };
       }
       return sg;
@@ -259,14 +284,14 @@ export default function CouncilRulesCRUD() {
       return sg;
     }));
   };
-  const handleUpdateSubItem = (subId, ruleId, subItemId, value) => {
+  const handleUpdateSubItemDelta = (subId, ruleId, subItemId, delta) => {
     setSubGroups(subGroups.map(sg => {
       if (sg.subId === subId) {
         return {
           ...sg,
           rules: sg.rules.map(r => r.ruleId === ruleId ? {
             ...r,
-            subItems: r.subItems.map(si => si.subItemId === subItemId ? { ...si, text: value } : si)
+            subItems: r.subItems.map(si => si.subItemId === subItemId ? { ...si, textDelta: delta } : si)
           } : r)
         };
       }
@@ -404,7 +429,7 @@ export default function CouncilRulesCRUD() {
           )}
         </div>
       ) : (
-        /* --- FORM VIEW (กฎสภา + รูปภาพแบบ Flex Row) --- */
+        /* --- FORM VIEW (กฎสภา + QuillEditor ข้อใหญ่และข้อย่อย + รูปภาพแบบ Flex Row) --- */
         <div className="space-y-6">
           <div className="bg-[#1e293b] border border-indigo-950/60 py-4 px-6 rounded-lg text-center shadow-lg">
             <h1 className="text-lg font-bold text-indigo-300 tracking-wide">
@@ -457,57 +482,63 @@ export default function CouncilRulesCRUD() {
                   </div>
 
                   <div className="pl-0 sm:pl-14 space-y-4">
-                    {sg.rules.map((rule, ruleIndex) => (
-                      <div key={rule.ruleId} className="flex flex-col gap-4 bg-[#0f172a] p-4 rounded-xl border border-indigo-950/30">
-                        <div className="flex items-start gap-3">
-                          <span className="text-indigo-400 font-bold shrink-0 pt-2">{ruleIndex + 1}.</span>
-                          <div className="flex-1 flex items-center gap-2">
-                            <textarea
-                              rows="2"
-                              required
-                              placeholder="รายละเอียดข้อใหญ่..."
-                              value={rule.text}
-                              onChange={(e) => handleUpdateRuleText(sg.subId, rule.ruleId, e.target.value)}
-                              className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg outline-none text-gray-200 text-sm focus:border-indigo-500 resize-y"
-                            />
-                            <button 
-                              type="button" 
-                              onClick={() => handleRemoveRule(sg.subId, rule.ruleId)} 
-                              className="p-3 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0" 
-                              title="ลบข้อใหญ่"
-                            >
-                              🗑
+                    {sg.rules.map((rule, ruleIndex) => {
+                      const ruleDelta = normalizeDelta(rule.textDelta || rule.text);
+                      return (
+                        <div key={rule.ruleId} className="flex flex-col gap-4 bg-[#0f172a] p-4 rounded-xl border border-indigo-950/30">
+                          <div className="flex items-start gap-3">
+                            <span className="text-indigo-400 font-bold shrink-0 pt-2">{ruleIndex + 1}.</span>
+                            <div className="flex-1 flex items-start gap-2">
+                              <div className="flex-1 bg-[#1e293b] rounded-xl overflow-hidden border border-indigo-900/40 text-white">
+                                <QuillEditor
+                                  value={ruleDelta}
+                                  onChange={(delta) => handleUpdateRuleDelta(sg.subId, rule.ruleId, delta)}
+                                  placeholder="รายละเอียดข้อใหญ่..."
+                                />
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => handleRemoveRule(sg.subId, rule.ruleId)} 
+                                className="p-3 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0 mt-1" 
+                                title="ลบข้อใหญ่"
+                              >
+                                🗑
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* ข้อย่อยใช้ QuillEditor ด้วย */}
+                          <div className="pl-6 pt-1 space-y-3">
+                            {rule.subItems.map((subItem, subItemIndex) => {
+                              const subItemDelta = normalizeDelta(subItem.textDelta || subItem.text);
+                              return (
+                                <div key={subItem.subItemId} className="flex items-start gap-2">
+                                  <span className="text-xs text-indigo-400 font-bold shrink-0 pt-3">{ruleIndex + 1}.{subItemIndex + 1}</span>
+                                  <div className="flex-1 bg-[#1e293b] rounded-xl overflow-hidden border border-indigo-900/40 text-white">
+                                    <QuillEditor
+                                      value={subItemDelta}
+                                      onChange={(delta) => handleUpdateSubItemDelta(sg.subId, rule.ruleId, subItem.subItemId, delta)}
+                                      placeholder={`รายละเอียดข้อย่อยที่ ${ruleIndex + 1}.${subItemIndex + 1}...`}
+                                    />
+                                  </div>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => handleRemoveSubItem(sg.subId, rule.ruleId, subItem.subItemId)} 
+                                    className="p-2.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0 mt-1"
+                                    title="ลบข้อย่อย"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              );
+                            })}
+                            <button type="button" onClick={() => handleAddSubItem(sg.subId, rule.ruleId)} className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer pt-1 block">
+                              + เพิ่มข้อย่อย
                             </button>
                           </div>
                         </div>
-
-                        <div className="pl-6 pt-1 space-y-2">
-                          {rule.subItems.map((subItem, subItemIndex) => (
-                            <div key={subItem.subItemId} className="flex items-center gap-2">
-                              <span className="text-xs text-indigo-400 font-bold shrink-0">{ruleIndex + 1}.{subItemIndex + 1}</span>
-                              <input
-                                type="text"
-                                placeholder={`รายละเอียดข้อย่อยที่ ${ruleIndex + 1}.${subItemIndex + 1}...`}
-                                value={subItem.text}
-                                onChange={(e) => handleUpdateSubItem(sg.subId, rule.ruleId, subItem.subItemId, e.target.value)}
-                                className="flex-1 px-3 py-2 bg-[#1e293b] border border-indigo-900/40 rounded-lg outline-none text-gray-200 text-xs focus:border-indigo-500"
-                              />
-                              <button 
-                                type="button" 
-                                onClick={() => handleRemoveSubItem(sg.subId, rule.ruleId, subItem.subItemId)} 
-                                className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0"
-                                title="ลบข้อย่อย"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ))}
-                          <button type="button" onClick={() => handleAddSubItem(sg.subId, rule.ruleId)} className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer pt-1">
-                            + เพิ่มข้อย่อย
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     <button type="button" onClick={() => handleAddRule(sg.subId)} className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer">
                       + เพิ่มข้อใหญ่

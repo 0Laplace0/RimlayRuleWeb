@@ -9,18 +9,56 @@
         "subTitle": "แพทย์",
         "rules": [
           {
-            "text": "แพทย์",
+            "textDelta": {
+              "ops": [
+                {
+                  "insert": "แพทย์"
+                }
+              ]
+            },
             "subItems": [
               {
-                "text": "แพทย์"
+                "textDelta": {
+                  "ops": [
+                    {
+                      "attributes": {
+                        "color": "#e60000",
+                        "background": "#ffff00"
+                      },
+                      "insert": "แพทย์"
+                    },
+                    {
+                      "insert": "\n"
+                    }
+                  ]
+                }
               }
             ]
           },
           {
-            "text": "แพทย์",
+            "textDelta": {
+              "ops": [
+                {
+                  "insert": "แพทย์"
+                }
+              ]
+            },
             "subItems": [
               {
-                "text": "แพทย์"
+                "textDelta": {
+                  "ops": [
+                    {
+                      "attributes": {
+                        "color": "#e60000",
+                        "background": "#ffff00"
+                      },
+                      "insert": "แพทย์"
+                    },
+                    {
+                      "insert": "\n"
+                    }
+                  ]
+                }
               }
             ]
           }
@@ -40,6 +78,73 @@
       }
     ],
     "footerNote": "แพทย์",
-    "createdAt": "2026-09-16T18:22:31.786Z"
+    "createdAt": "2026-09-16T18:22:31.786Z",
+    "updatedAt": "2026-09-19T14:42:03.678Z"
+  },
+  {
+    "id": "1789827310044",
+    "title": "ค่ารักษา",
+    "type": "rule",
+    "items": [],
+    "subGroups": [
+      {
+        "subTitle": "ค่ารักษา",
+        "rules": [
+          {
+            "textDelta": {
+              "ops": [
+                {
+                  "attributes": {
+                    "color": "#e60000",
+                    "background": "#ffff00"
+                  },
+                  "insert": "ค่ารักษา"
+                },
+                {
+                  "insert": "\n"
+                }
+              ]
+            },
+            "penaltyValue": "1000"
+          },
+          {
+            "textDelta": {
+              "ops": [
+                {
+                  "attributes": {
+                    "underline": true,
+                    "bold": true
+                  },
+                  "insert": "ค่ารักษา"
+                },
+                {
+                  "insert": "\n"
+                }
+              ]
+            },
+            "penaltyValue": "2000"
+          }
+        ]
+      },
+      {
+        "subTitle": "ค่ารักษา",
+        "rules": [
+          {
+            "textDelta": {
+              "ops": [
+                {
+                  "insert": "ค่ารักษา"
+                }
+              ]
+            },
+            "penaltyValue": "2000"
+          }
+        ]
+      }
+    ],
+    "images": [],
+    "footerNote": "ค่ารักษา",
+    "createdAt": "2026-09-19T14:15:10.044Z",
+    "updatedAt": "2026-09-19T14:47:11.716Z"
   }
 ]

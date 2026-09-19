@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { swalUtils } from '../../utils/swalUtils.js';
 import Pagination from '../Pagination';
+import QuillEditor from '../QuillEditor.jsx';
 
 export default function PoliceRulesCRUD() {
   // --- STATES ---
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [view, setView] = useState('table'); // 'table' | 'form-police' | 'form-terms'
-  const [formType, setFormType] = useState('police'); // 'police' | 'terms'
+  const [view, setView] = useState('table'); // 'table' | 'form-penalty' | 'form-terms'
+  const [formType, setFormType] = useState('penalty'); // 'penalty' | 'terms'
   const [isSelectModalOpen, setIsSelectModalOpen] = useState(false); // Popup State
 
   // Pagination State
@@ -21,12 +22,12 @@ export default function PoliceRulesCRUD() {
   const [title, setTitle] = useState('');
   const [footerNote, setFooterNote] = useState('');
   
-  // 1. Police Rules SubGroups (มี penaltyValue, jailTime)
-  const [policeSubGroups, setPoliceSubGroups] = useState([
-    { subTitle: '', rules: [{ text: '', penaltyValue: '', jailTime: '' }] }
+  // 1. Penalty Rules SubGroups (ใช้ textDelta ร่วมกับ QuillEditor, เพิ่ม jailValue)
+  const [penaltySubGroups, setPenaltySubGroups] = useState([
+    { subId: `temp_sg_${Date.now()}`, subTitle: '', rules: [{ ruleId: `temp_r_${Date.now()}`, textDelta: { ops: [{ insert: '' }] }, penaltyValue: '', jailValue: '' }] }
   ]);
 
-  // 2. Terms Rules SubGroups (มี subItems)
+  // 2. Terms Rules SubGroups (ใช้ textDelta และ QuillEditor ทั้งข้อใหญ่และข้อย่อย)
   const [termsSubGroups, setTermsSubGroups] = useState([
     { 
       subId: `temp_${Date.now()}`, 
@@ -34,15 +35,22 @@ export default function PoliceRulesCRUD() {
       rules: [
         { 
           ruleId: `temp_${Date.now()}`, 
-          text: '', 
+          textDelta: { ops: [{ insert: '' }] }, 
           subItems: [] 
         }
       ] 
     }
   ]);
 
-  // 3. Terms Images State (สำหรับฟอร์มกฎ)
+  // 3. Terms Images State (สำหรับฟอร์มกฎที่มีรูปภาพ)
   const [termsImages, setTermsImages] = useState([]);
+
+  // --- Helper function สำหรับแปลง Text/Delta ---
+  const normalizeDelta = (val) => {
+    if (!val) return { ops: [{ insert: '' }] };
+    if (typeof val === 'object' && val.ops) return val;
+    return { ops: [{ insert: String(val) }] };
+  };
 
   const getAuthHeader = () => {
     const token = localStorage.getItem('token');
@@ -61,7 +69,7 @@ export default function PoliceRulesCRUD() {
       setCategories(res.data.data || res.data || []);
     } catch (err) {
       console.error(err);
-      swalUtils.error('เกิดข้อผิดพลาด!', 'ไม่สามารถดึงข้อมูลกฎตำรวจได้');
+      swalUtils.error('เกิดข้อผิดพลาด!', 'ไม่สามารถดึงข้อมูลกฎ/ค่าปรับตำรวจได้');
     } finally {
       setLoading(false);
     }
@@ -71,13 +79,16 @@ export default function PoliceRulesCRUD() {
     setEditingId(null);
     setTitle('');
     setFooterNote('');
-    setPoliceSubGroups([{ subTitle: '', rules: [{ text: '', penaltyValue: '', jailTime: '' }] }]);
-    setTermsSubGroups([{ subId: `temp_${Date.now()}`, subTitle: '', rules: [{ ruleId: `temp_${Date.now()}`, text: '', subItems: [] }] }]);
+    setPenaltySubGroups([{ subId: `temp_sg_${Date.now()}`, subTitle: '', rules: [{ ruleId: `temp_r_${Date.now()}`, textDelta: { ops: [{ insert: '' }] }, penaltyValue: '', jailValue: '' }] }]);
+    setTermsSubGroups([{ 
+      subId: `temp_${Date.now()}`, 
+      subTitle: '', 
+      rules: [{ ruleId: `temp_${Date.now()}`, textDelta: { ops: [{ insert: '' }] }, subItems: [] }] 
+    }]);
     setTermsImages([]);
     setView('table');
   };
 
-  // เปิด Popup เลือกประเภทฟอร์ม
   const handleOpenSelectModal = () => {
     resetForm();
     setIsSelectModalOpen(true);
@@ -86,11 +97,7 @@ export default function PoliceRulesCRUD() {
   const handleSelectFormType = (type) => {
     setFormType(type);
     setIsSelectModalOpen(false);
-    if (type === 'terms') {
-      setView('form-terms');
-    } else {
-      setView('form-police');
-    }
+    setView(type === 'terms' ? 'form-terms' : 'form-penalty');
   };
 
   const handleEdit = (category) => {
@@ -104,20 +111,23 @@ export default function PoliceRulesCRUD() {
     if (isTermsStyle) {
       setFormType('terms');
       const mappedTerms = rawSubGroups.map(sg => ({
-        subId: sg.subId || sg.id || `temp_${Date.now()}`,
+        subId: sg.subId || sg.id || `temp_${Date.now()}_${Math.random()}`,
         subTitle: sg.subTitle || sg.sub_title || sg.name || '',
         rules: (sg.rules || sg.items || []).map(r => ({
-          ruleId: r.ruleId || r.id || `temp_${Date.now()}`,
-          text: r.text || r.rule_text || '',
+          ruleId: r.ruleId || r.id || `temp_${Date.now()}_${Math.random()}`,
+          textDelta: normalizeDelta(r.textDelta || r.text),
           subItems: (r.subItems || r.sub_items || []).map(si => ({
-            subItemId: si.subItemId || si.id || `temp_${Date.now()}`,
-            text: si.text || si.content || ''
+            subItemId: si.subItemId || si.id || `temp_${Date.now()}_${Math.random()}`,
+            textDelta: normalizeDelta(si.textDelta || si.text)
           }))
         }))
       }));
-      setTermsSubGroups(mappedTerms.length > 0 ? mappedTerms : [{ subId: `temp_${Date.now()}`, subTitle: '', rules: [] }]);
+      setTermsSubGroups(mappedTerms.length > 0 ? mappedTerms : [{ 
+        subId: `temp_${Date.now()}`, 
+        subTitle: '', 
+        rules: [{ ruleId: `temp_${Date.now()}`, textDelta: { ops: [{ insert: '' }] }, subItems: [] }] 
+      }]);
 
-      // Map รูปภาพสำหรับฟอร์มกฎ
       const copiedImages = (category.images || []).map(img => ({
         id: img.id,
         caption: img.caption || '',
@@ -125,20 +135,21 @@ export default function PoliceRulesCRUD() {
         preview: img.imageUrl ? `http://localhost:5000${img.imageUrl}` : null
       }));
       setTermsImages(copiedImages);
-
       setView('form-terms');
     } else {
-      setFormType('police');
-      const mappedPolice = rawSubGroups.map(sub => ({
+      setFormType('penalty');
+      const mappedPenalty = rawSubGroups.map(sub => ({
+        subId: sub.subId || `temp_sg_${Date.now()}_${Math.random()}`,
         subTitle: sub.subTitle || sub.sub_title || '',
         rules: (sub.rules || sub.items || []).map(r => ({
-          text: r.text || '',
+          ruleId: r.ruleId || `temp_r_${Date.now()}_${Math.random()}`,
+          textDelta: normalizeDelta(r.textDelta || r.text),
           penaltyValue: r.penaltyValue || r.penalty_value || '',
-          jailTime: r.jailTime || r.jail_time || ''
+          jailValue: r.jailValue || r.jail_value || ''
         }))
       }));
-      setPoliceSubGroups(mappedPolice.length > 0 ? mappedPolice : [{ subTitle: '', rules: [{ text: '', penaltyValue: '', jailTime: '' }] }]);
-      setView('form-police');
+      setPenaltySubGroups(mappedPenalty.length > 0 ? mappedPenalty : [{ subId: `temp_sg_${Date.now()}`, subTitle: '', rules: [{ ruleId: `temp_r_${Date.now()}`, textDelta: { ops: [{ insert: '' }] }, penaltyValue: '', jailValue: '' }] }]);
+      setView('form-penalty');
     }
   };
 
@@ -172,17 +183,17 @@ export default function PoliceRulesCRUD() {
     }
 
     let payload = {};
-    let apiUrl = 'http://localhost:5000/api/police-rules'; // ตั้งค่าเริ่มต้นเป็น police-rules ได้เลย หรือกำหนดแยกตามเงื่อนไข
+    let apiUrl = 'http://localhost:5000/api/police-rules';
     let isMultipart = false;
 
     if (formType === 'terms') {
-      apiUrl = 'http://localhost:5000/api/police-rules'; // <--- เปลี่ยนจาก /api/terms เป็น /api/police-rules ที่นี่
-      
       const formattedSubGroups = termsSubGroups.map(sg => ({
         subTitle: sg.subTitle || '',
         rules: (sg.rules || []).map(r => ({
-          text: r.text || '',
-          subItems: (r.subItems || []).map(si => ({ text: si.text || '' }))
+          textDelta: r.textDelta || { ops: [{ insert: '' }] },
+          subItems: (r.subItems || []).map(si => ({
+            textDelta: si.textDelta || { ops: [{ insert: '' }] }
+          }))
         }))
       }));
 
@@ -210,12 +221,18 @@ export default function PoliceRulesCRUD() {
         };
       }
     } else {
-      apiUrl = 'http://localhost:5000/api/police-rules';
       payload = {
         title: title.trim(),
         footerNote: footerNote.trim(),
         footer_note: footerNote.trim(),
-        subGroups: policeSubGroups
+        subGroups: penaltySubGroups.map(sg => ({
+          subTitle: sg.subTitle || '',
+          rules: sg.rules.map(r => ({
+            textDelta: r.textDelta || { ops: [{ insert: '' }] },
+            penaltyValue: r.penaltyValue || '',
+            jailValue: r.jailValue || ''
+          }))
+        }))
       };
     }
 
@@ -242,39 +259,62 @@ export default function PoliceRulesCRUD() {
     }
   };
 
-  // --- POLICE FORM HANDLERS ---
-  const handleAddPoliceSubGroup = () => {
-    setPoliceSubGroups([...policeSubGroups, { subTitle: '', rules: [{ text: '', penaltyValue: '', jailTime: '' }] }]);
+  // --- PENALTY FORM HANDLERS (Immutable Safe) ---
+  const handleAddPenaltySubGroup = () => {
+    setPenaltySubGroups([
+      ...penaltySubGroups.map(sg => ({ ...sg, rules: sg.rules.map(r => ({ ...r })) })),
+      { subId: `temp_sg_${Date.now()}_${Math.random()}`, subTitle: '', rules: [{ ruleId: `temp_r_${Date.now()}_${Math.random()}`, textDelta: { ops: [{ insert: '' }] }, penaltyValue: '', jailValue: '' }] }
+    ]);
   };
-  const handleRemovePoliceSubGroup = (subIdx) => {
-    setPoliceSubGroups(policeSubGroups.filter((_, idx) => idx !== subIdx));
+  const handleRemovePenaltySubGroup = (subId) => {
+    setPenaltySubGroups(penaltySubGroups.filter(sg => sg.subId !== subId));
   };
-  const handlePoliceSubTitleChange = (subIdx, value) => {
-    const updated = [...policeSubGroups];
-    updated[subIdx].subTitle = value;
-    setPoliceSubGroups(updated);
+  const handlePenaltySubTitleChange = (subId, value) => {
+    setPenaltySubGroups(penaltySubGroups.map(sg => sg.subId === subId ? { ...sg, subTitle: value } : sg));
   };
-  const handleAddPoliceRule = (subIdx) => {
-    const updated = [...policeSubGroups];
-    updated[subIdx].rules.push({ text: '', penaltyValue: '', jailTime: '' });
-    setPoliceSubGroups(updated);
+  const handleAddPenaltyRule = (subId) => {
+    setPenaltySubGroups(penaltySubGroups.map(sg => {
+      if (sg.subId === subId) {
+        return {
+          ...sg,
+          rules: [...sg.rules.map(r => ({ ...r })), { ruleId: `temp_r_${Date.now()}_${Math.random()}`, textDelta: { ops: [{ insert: '' }] }, penaltyValue: '', jailValue: '' }]
+        };
+      }
+      return sg;
+    }));
   };
-  const handleRemovePoliceRule = (subIdx, ruleIdx) => {
-    const updated = [...policeSubGroups];
-    updated[subIdx].rules = updated[subIdx].rules.filter((_, idx) => idx !== ruleIdx);
-    setPoliceSubGroups(updated);
+  const handleRemovePenaltyRule = (subId, ruleId) => {
+    setPenaltySubGroups(penaltySubGroups.map(sg => {
+      if (sg.subId === subId) {
+        return {
+          ...sg,
+          rules: sg.rules.filter(r => r.ruleId !== ruleId)
+        };
+      }
+      return sg;
+    }));
   };
-  const handlePoliceRuleChange = (subIdx, ruleIdx, field, value) => {
-    const updated = [...policeSubGroups];
-    updated[subIdx].rules[ruleIdx][field] = value;
-    setPoliceSubGroups(updated);
+  const handlePenaltyRuleChange = (subId, ruleId, field, value) => {
+    setPenaltySubGroups(penaltySubGroups.map(sg => {
+      if (sg.subId === subId) {
+        return {
+          ...sg,
+          rules: sg.rules.map(r => r.ruleId === ruleId ? { ...r, [field]: value } : r)
+        };
+      }
+      return sg;
+    }));
   };
 
-  // --- TERMS FORM HANDLERS ---
+  // --- TERMS FORM HANDLERS (Immutable Safe) ---
   const handleAddTermsSubGroup = () => {
     setTermsSubGroups([
-      ...termsSubGroups, 
-      { subId: `temp_${Date.now()}`, subTitle: '', rules: [{ ruleId: `temp_${Date.now()}`, text: '', subItems: [] }] }
+      ...termsSubGroups.map(sg => ({ ...sg, rules: sg.rules.map(r => ({ ...r, subItems: r.subItems.map(si => ({...si})) })) })),
+      { 
+        subId: `temp_${Date.now()}_${Math.random()}`, 
+        subTitle: '', 
+        rules: [{ ruleId: `temp_rule_${Date.now()}_${Math.random()}`, textDelta: { ops: [{ insert: '' }] }, subItems: [] }] 
+      }
     ]);
   };
   const handleRemoveTermsSubGroup = (subId) => {
@@ -288,7 +328,7 @@ export default function PoliceRulesCRUD() {
       if (sg.subId === subId) {
         return {
           ...sg,
-          rules: [...sg.rules, { ruleId: `temp_${Date.now()}`, text: '', subItems: [] }]
+          rules: [...sg.rules, { ruleId: `temp_rule_${Date.now()}_${Math.random()}`, textDelta: { ops: [{ insert: '' }] }, subItems: [] }]
         };
       }
       return sg;
@@ -302,12 +342,12 @@ export default function PoliceRulesCRUD() {
       return sg;
     }));
   };
-  const handleUpdateTermsRuleText = (subId, ruleId, value) => {
+  const handleUpdateTermsRuleDelta = (subId, ruleId, delta) => {
     setTermsSubGroups(termsSubGroups.map(sg => {
       if (sg.subId === subId) {
         return {
           ...sg,
-          rules: sg.rules.map(r => r.ruleId === ruleId ? { ...r, text: value } : r)
+          rules: sg.rules.map(r => r.ruleId === ruleId ? { ...r, textDelta: delta } : r)
         };
       }
       return sg;
@@ -318,7 +358,10 @@ export default function PoliceRulesCRUD() {
       if (sg.subId === subId) {
         return {
           ...sg,
-          rules: sg.rules.map(r => r.ruleId === ruleId ? { ...r, subItems: [...r.subItems, { subItemId: `temp_${Date.now()}`, text: '' }] } : r)
+          rules: sg.rules.map(r => r.ruleId === ruleId ? { 
+            ...r, 
+            subItems: [...r.subItems, { subItemId: `temp_subitem_${Date.now()}_${Math.random()}`, textDelta: { ops: [{ insert: '' }] } }] 
+          } : r)
         };
       }
       return sg;
@@ -335,14 +378,14 @@ export default function PoliceRulesCRUD() {
       return sg;
     }));
   };
-  const handleUpdateTermsSubItem = (subId, ruleId, subItemId, value) => {
+  const handleUpdateTermsSubItemDelta = (subId, ruleId, subItemId, delta) => {
     setTermsSubGroups(termsSubGroups.map(sg => {
       if (sg.subId === subId) {
         return {
           ...sg,
           rules: sg.rules.map(r => r.ruleId === ruleId ? {
             ...r,
-            subItems: r.subItems.map(si => si.subItemId === subItemId ? { ...si, text: value } : si)
+            subItems: r.subItems.map(si => si.subItemId === subItemId ? { ...si, textDelta: delta } : si)
           } : r)
         };
       }
@@ -405,7 +448,6 @@ export default function PoliceRulesCRUD() {
         <div>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <h2 className="text-2xl font-bold text-white">จัดการข้อมูล: กฎ & ค่าปรับ (ตำรวจ)</h2>
-            
             <div className="flex items-center gap-3 w-full md:w-auto">
               <input
                 type="text"
@@ -478,13 +520,52 @@ export default function PoliceRulesCRUD() {
               totalItems={filteredCategories.length}
             />
           )}
+
+          {isSelectModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+              <div className="bg-[#1e293b] border border-indigo-950 rounded-2xl max-w-md w-full p-6 space-y-6 shadow-2xl">
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-bold text-white">เลือกรูปแบบข้อมูล</h3>
+                  <p className="text-xs text-gray-400">กรุณาเลือกประเภทรูปแบบที่คุณต้องการสร้าง</p>
+                </div>
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectFormType('terms')}
+                    className="p-4 rounded-xl bg-[#0f172a] hover:bg-indigo-950/40 border border-indigo-900/50 text-left transition space-y-1 cursor-pointer group"
+                  >
+                    <div className="font-bold text-indigo-300 group-hover:text-indigo-200">กฎระเบียบ</div>
+                    <div className="text-xs text-gray-400">ฟอร์มกฎแบบมีหัวข้อหลัก กลุ่มย่อย ข้อ และข้อย่อยแบบลำดับชั้น</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectFormType('penalty')}
+                    className="p-4 rounded-xl bg-[#0f172a] hover:bg-indigo-950/40 border border-indigo-900/50 text-left transition space-y-1 cursor-pointer group"
+                  >
+                    <div className="font-bold text-indigo-300 group-hover:text-indigo-200">ค่าปรับ</div>
+                    <div className="text-xs text-gray-400">ฟอร์มสำหรับระบุรายการ ราคาค่าปรับ และเวลาจำคุก</div>
+                  </button>
+                </div>
+                <div className="text-center pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsSelectModalOpen(false)}
+                    className="px-6 py-2 rounded-full text-xs font-bold text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition cursor-pointer"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      ) : view === 'form-police' ? (
-        /* --- POLICE FORM VIEW (ค่าปรับ) --- */
+      ) : view === 'form-penalty' ? (
+        /* --- PENALTY FORM VIEW (ค่าปรับ - ใช้ QuillEditor) --- */
         <div className="space-y-6">
           <div className="bg-[#1e293b] border border-indigo-950/60 py-4 px-6 rounded-lg text-center shadow-lg">
             <h1 className="text-lg font-bold text-indigo-300 tracking-wide">
-              :: {editingId ? 'แก้ไขข้อมูลค่าปรับ' : 'เพิ่มข้อมูลค่าปรับ'} ::
+              :: {editingId ? 'แก้ไขข้อมูลค่าปรับ (ตำรวจ)' : 'เพิ่มข้อมูลค่าปรับ (ตำรวจ)'} ::
             </h1>
           </div>
 
@@ -498,24 +579,23 @@ export default function PoliceRulesCRUD() {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="flex-1 px-4 py-2.5 rounded-xl bg-[#0f172a] border border-indigo-950/60 focus:outline-none focus:border-indigo-500 text-white"
-                  placeholder="เช่น อัตราค่าปรับจราจร"
+                  placeholder="เช่น อัตราค่าปรับจราจร/คดีอาญา"
                 />
               </div>
             </div>
 
-            {/* SubGroups for Police */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-indigo-950/40 pb-2">
-                <h3 className="text-md font-bold text-indigo-300">หมวดหมู่กลุ่มย่อย & รายการ</h3>
-                <button type="button" onClick={handleAddPoliceSubGroup} className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-400 rounded-full text-xs font-bold transition cursor-pointer">
+                <h3 className="text-md font-bold text-indigo-300">หมวดหมู่กลุ่มย่อย & รายการค่าปรับ</h3>
+                <button type="button" onClick={handleAddPenaltySubGroup} className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-400 rounded-full text-xs font-bold transition cursor-pointer">
                   + เพิ่มกลุ่มย่อย
                 </button>
               </div>
 
-              {policeSubGroups.map((sub, subIdx) => (
-                <div key={subIdx} className="bg-[#1e293b]/80 p-5 rounded-2xl border border-indigo-900/30 space-y-4 relative">
-                  {policeSubGroups.length > 1 && (
-                    <button type="button" onClick={() => handleRemovePoliceSubGroup(subIdx)} className="absolute top-4 right-4 text-gray-500 hover:text-rose-500 cursor-pointer" title="ลบกลุ่มนี้">
+              {penaltySubGroups.map((sub, subIdx) => (
+                <div key={sub.subId} className="bg-[#1e293b]/80 p-5 rounded-2xl border border-indigo-900/30 space-y-4 relative">
+                  {penaltySubGroups.length > 1 && (
+                    <button type="button" onClick={() => handleRemovePenaltySubGroup(sub.subId)} className="absolute top-4 right-4 text-gray-500 hover:text-rose-500 cursor-pointer" title="ลบกลุ่มนี้">
                       ✕
                     </button>
                   )}
@@ -526,62 +606,64 @@ export default function PoliceRulesCRUD() {
                       type="text"
                       placeholder="ชื่อกลุ่มย่อย (ถ้ามี)..."
                       value={sub.subTitle}
-                      onChange={(e) => handlePoliceSubTitleChange(subIdx, e.target.value)}
+                      onChange={(e) => handlePenaltySubTitleChange(sub.subId, e.target.value)}
                       className="flex-1 px-4 py-2.5 rounded-xl bg-[#0f172a] border border-indigo-950/60 text-white font-semibold text-sm focus:outline-none focus:border-indigo-500"
                     />
                   </div>
 
                   <div className="space-y-3 pl-0 sm:pl-6">
-                    {sub.rules.map((rule, ruleIdx) => (
-                      <div key={ruleIdx} className="bg-[#0f172a] p-4 rounded-xl border border-indigo-950/40 space-y-3">
-                        <div className="flex items-start gap-2">
-                          <span className="text-indigo-400 font-bold pt-2">{ruleIdx + 1}.</span>
-                          <textarea
-                            rows="2"
-                            required
-                            placeholder="รายละเอียด..."
-                            value={rule.text}
-                            onChange={(e) => handlePoliceRuleChange(subIdx, ruleIdx, 'text', e.target.value)}
-                            className="flex-1 px-3 py-2 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-gray-200 text-sm focus:outline-none focus:border-indigo-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePoliceRule(subIdx, ruleIdx)}
-                            className="p-2.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer"
-                            title="ลบข้อนี้"
-                          >
-                            🗑
-                          </button>
-                        </div>
-
-                        {/* Penalty & Jail Time */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
-                          <div>
-                            <label className="text-xs text-gray-400 mb-1 block">ค่าปรับ / บทลงโทษ</label>
-                            <input
-                              type="text"
-                              placeholder="เช่น [ยึดของกลาง] 5,000 บาท"
-                              value={rule.penaltyValue}
-                              onChange={(e) => handlePoliceRuleChange(subIdx, ruleIdx, 'penaltyValue', e.target.value)}
-                              className="w-full px-3 py-1.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
-                            />
+                    {sub.rules.map((rule, ruleIdx) => {
+                      const ruleDelta = normalizeDelta(rule.textDelta || rule.text);
+                      return (
+                        <div key={rule.ruleId} className="bg-[#0f172a] p-4 rounded-xl border border-indigo-950/40 space-y-3">
+                          <div className="flex items-start gap-2">
+                            <span className="text-indigo-400 font-bold pt-2">{ruleIdx + 1}.</span>
+                            <div className="flex-1 bg-[#1e293b] rounded-xl overflow-hidden border border-indigo-900/40 text-white">
+                              <QuillEditor
+                                value={ruleDelta}
+                                onChange={(delta) => handlePenaltyRuleChange(sub.subId, rule.ruleId, 'textDelta', delta)}
+                                placeholder="รายละเอียดการกระทำผิด..."
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePenaltyRule(sub.subId, rule.ruleId)}
+                              className="p-2.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer mt-1"
+                              title="ลบข้อนี้"
+                            >
+                              🗑
+                            </button>
                           </div>
 
-                          <div>
-                            <label className="text-xs text-gray-400 mb-1 block">เวลาจำคุก (ถ้ามี)</label>
-                            <input
-                              type="text"
-                              placeholder="เช่น 30 นาที หรือ 3 เดือน"
-                              value={rule.jailTime}
-                              onChange={(e) => handlePoliceRuleChange(subIdx, ruleIdx, 'jailTime', e.target.value)}
-                              className="w-full px-3 py-1.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
-                            />
+                          {/* --- วางช่อง "จำคุก / นาที" ไว้ข้างๆ "ค่าปรับ" --- */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
+                            <div>
+                              <label className="text-xs text-gray-400 mb-1 block">ค่าปรับ</label>
+                              <input
+                                type="text"
+                                placeholder="เช่น 1,000 บาท"
+                                value={rule.penaltyValue}
+                                onChange={(e) => handlePenaltyRuleChange(sub.subId, rule.ruleId, 'penaltyValue', e.target.value)}
+                                className="w-full px-3 py-1.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-xs text-gray-400 mb-1 block">จำคุก / นาที</label>
+                              <input
+                                type="text"
+                                placeholder="เช่น 10 นาที"
+                                value={rule.jailValue || ''}
+                                onChange={(e) => handlePenaltyRuleChange(sub.subId, rule.ruleId, 'jailValue', e.target.value)}
+                                className="w-full px-3 py-1.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
-                    <button type="button" onClick={() => handleAddPoliceRule(subIdx)} className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer">
+                    <button type="button" onClick={() => handleAddPenaltyRule(sub.subId)} className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer">
                       + เพิ่มรายการในกลุ่มนี้
                     </button>
                   </div>
@@ -607,11 +689,11 @@ export default function PoliceRulesCRUD() {
           </form>
         </div>
       ) : (
-        /* --- TERMS FORM VIEW (กฎ) --- */
+        /* --- TERMS FORM VIEW (กฎ + QuillEditor ข้อใหญ่และข้อย่อย + รูปภาพ) --- */
         <div className="space-y-6">
           <div className="bg-[#1e293b] border border-indigo-950/60 py-4 px-6 rounded-lg text-center shadow-lg">
             <h1 className="text-lg font-bold text-indigo-300 tracking-wide">
-              :: {editingId ? 'แก้ไขข้อมูลกฎ (ตำรวจ)' : 'เพิ่มข้อมูลกฎ (ตำรวจ)'} ::
+              :: {editingId ? 'แก้ไขข้อมูลกฎระเบียบ (ตำรวจ)' : 'เพิ่มข้อมูลกฎระเบียบ (ตำรวจ)'} ::
             </h1>
           </div>
 
@@ -629,7 +711,6 @@ export default function PoliceRulesCRUD() {
               </div>
             </div>
 
-            {/* Sub-groups */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-indigo-950/40 pb-2">
                 <h3 className="text-md font-bold text-indigo-300">หมวดหมู่กฎย่อย & ข้อย่อย (Sub-items)</h3>
@@ -659,128 +740,119 @@ export default function PoliceRulesCRUD() {
                   </div>
 
                   <div className="pl-0 sm:pl-14 space-y-4">
-                    {sg.rules.map((rule, ruleIndex) => (
-                      <div key={rule.ruleId} className="flex flex-col gap-4 bg-[#0f172a] p-4 rounded-xl border border-indigo-950/30">
-                        <div className="flex items-start gap-3">
-                          <span className="text-indigo-400 font-bold shrink-0 pt-2">{ruleIndex + 1}.</span>
-                          <div className="flex-1 flex items-center gap-2">
-                            <textarea
-                              rows="2"
-                              required
-                              placeholder="รายละเอียดข้อใหญ่..."
-                              value={rule.text}
-                              onChange={(e) => handleUpdateTermsRuleText(sg.subId, rule.ruleId, e.target.value)}
-                              className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg outline-none text-gray-200 text-sm focus:border-indigo-500 resize-y"
-                            />
-                            <button 
-                              type="button" 
-                              onClick={() => handleRemoveTermsRule(sg.subId, rule.ruleId)} 
-                              className="p-3 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0" 
-                              title="ลบข้อใหญ่"
+                    {sg.rules.map((rule, ruleIndex) => {
+                      const ruleDelta = normalizeDelta(rule.textDelta || rule.text);
+                      return (
+                        <div key={rule.ruleId} className="flex flex-col gap-4 bg-[#0f172a] p-4 rounded-xl border border-indigo-950/30">
+                          <div className="flex items-start gap-3">
+                            <span className="text-indigo-400 font-bold shrink-0 pt-2">{ruleIndex + 1}.</span>
+                            <div className="flex-1 flex items-start gap-2">
+                              <div className="flex-1 bg-[#1e293b] rounded-xl overflow-hidden border border-indigo-900/40 text-white">
+                                <QuillEditor
+                                  value={ruleDelta}
+                                  onChange={(delta) => handleUpdateTermsRuleDelta(sg.subId, rule.ruleId, delta)}
+                                  placeholder="รายละเอียดข้อกฎระเบียบ..."
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveTermsRule(sg.subId, rule.ruleId)}
+                                className="p-2.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer mt-1"
+                                title="ลบข้อนี้"
+                              >
+                                🗑
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* SubItems */}
+                          <div className="pl-6 space-y-3">
+                            {rule.subItems?.map((subItem, subItemIndex) => {
+                              const subItemDelta = normalizeDelta(subItem.textDelta || subItem.text);
+                              return (
+                                <div key={subItem.subItemId} className="flex items-start gap-2">
+                                  <span className="text-gray-400 text-xs shrink-0 pt-2">{ruleIndex + 1}.{subItemIndex + 1}</span>
+                                  <div className="flex-1 bg-[#1e293b] rounded-xl overflow-hidden border border-indigo-900/40 text-white">
+                                    <QuillEditor
+                                      value={subItemDelta}
+                                      onChange={(delta) => handleUpdateTermsSubItemDelta(sg.subId, rule.ruleId, subItem.subItemId, delta)}
+                                      placeholder="ข้อย่อย..."
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveTermsSubItem(sg.subId, rule.ruleId, subItem.subItemId)}
+                                    className="p-2 text-rose-400 hover:text-rose-300 transition cursor-pointer mt-1"
+                                    title="ลบข้อย่อย"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              );
+                            })}
+                            <button
+                              type="button"
+                              onClick={() => handleAddTermsSubItem(sg.subId, rule.ruleId)}
+                              className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer"
                             >
-                              🗑
+                              + เพิ่มข้อย่อย
                             </button>
                           </div>
                         </div>
+                      );
+                    })}
 
-                        <div className="pl-6 pt-1 space-y-2">
-                          {rule.subItems.map((subItem, subItemIndex) => (
-                            <div key={subItem.subItemId} className="flex items-center gap-2">
-                              <span className="text-xs text-indigo-400 font-bold shrink-0">{ruleIndex + 1}.{subItemIndex + 1}</span>
-                              <input
-                                type="text"
-                                placeholder={`รายละเอียดข้อย่อยที่ ${ruleIndex + 1}.${subItemIndex + 1}...`}
-                                value={subItem.text}
-                                onChange={(e) => handleUpdateTermsSubItem(sg.subId, rule.ruleId, subItem.subItemId, e.target.value)}
-                                className="flex-1 px-3 py-2 bg-[#1e293b] border border-indigo-900/40 rounded-lg outline-none text-gray-200 text-xs focus:border-indigo-500"
-                              />
-                              <button 
-                                type="button" 
-                                onClick={() => handleRemoveTermsSubItem(sg.subId, rule.ruleId, subItem.subItemId)} 
-                                className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0 text-xs"
-                                title="ลบข้อย่อย"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ))}
-                          <button 
-                            type="button" 
-                            onClick={() => handleAddTermsSubItem(sg.subId, rule.ruleId)} 
-                            className="text-[11px] text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold cursor-pointer pt-1"
-                          >
-                            + เพิ่มข้อย่อย ({ruleIndex + 1}.x)
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-
-                    <button type="button" onClick={() => handleAddTermsRule(sg.subId)} className="mt-2 text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold cursor-pointer">
-                      + เพิ่มข้อบังคับ/กฎ (ข้อใหญ่)
+                    <button
+                      type="button"
+                      onClick={() => handleAddTermsRule(sg.subId)}
+                      className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer"
+                    >
+                      + เพิ่มข้อในหมวดนี้
                     </button>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* --- Section รูปภาพประกอบ และชื่อภาพ (วางไว้ก่อนหมายเหตุ) --- */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-indigo-950/40 pb-2">
-                <h3 className="text-md font-bold text-indigo-300">รูปภาพประกอบ และชื่อภาพ</h3>
-              </div>
-
-              {termsImages.map((img, index) => {
-                const imgKey = img.tempId || img.id;
-                return (
-                  <div key={imgKey} className="bg-[#1e293b]/80 p-5 rounded-2xl border border-indigo-900/30 space-y-4 relative">
-                    <button 
-                      type="button" 
-                      onClick={() => handleRemoveTermsImageRow(index)} 
-                      className="absolute top-4 right-4 text-gray-500 hover:text-rose-500 cursor-pointer" 
-                      title="ลบรูปนี้"
-                    >
-                      ✕
-                    </button>
-
-                    <div className="flex items-center gap-3 pr-10">
-                      <div className="w-10 h-10 rounded-xl bg-indigo-900/40 border border-indigo-700/50 flex items-center justify-center shrink-0 shadow-inner">
-                        <span className="text-indigo-300 font-black text-sm">#{index + 1}</span>
-                      </div>
-                      <input
-                        type="text"
-                        placeholder="ชื่อภาพประกอบ (Caption)..."
-                        value={img.caption}
-                        onChange={(e) => handleTermsImageCaptionChange(index, e.target.value)}
-                        className="flex-1 px-4 py-2.5 rounded-xl bg-[#0f172a] border border-indigo-950/60 text-white font-semibold focus:outline-none focus:border-indigo-500 text-sm"
-                      />
-                    </div>
-
-                    <div className="pl-0 sm:pl-13 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleTermsImageFileChange(index, e)}
-                        className="w-full sm:flex-1 px-4 py-2 rounded-xl bg-[#0f172a] border border-indigo-950/60 text-gray-300 file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer text-xs"
-                      />
-                      {img.preview && (
-                        <div className="shrink-0">
-                          <img src={img.preview} alt="Preview" className="w-24 h-14 object-cover rounded-lg border border-indigo-900/50 shadow" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div className="flex justify-center pt-2">
-                <button 
-                  type="button" 
-                  onClick={handleAddTermsImageRow} 
-                  className="px-6 py-2 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-400 rounded-full text-xs font-bold transition cursor-pointer shadow-md"
+            {/* Images Section */}
+            <div className="bg-[#1e293b]/40 p-6 rounded-2xl border border-indigo-950/40 space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-gray-300 font-semibold text-xs">รูปภาพประกอบ (ถ้ามี)</label>
+                <button
+                  type="button"
+                  onClick={handleAddTermsImageRow}
+                  className="px-3 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-400 rounded-full text-xs font-bold transition cursor-pointer"
                 >
-                  + เพิ่มรูปภาพประกอบ
+                  + เพิ่มรูปภาพ
                 </button>
               </div>
+              {termsImages.map((img, imgIdx) => (
+                <div key={img.tempId || img.id || imgIdx} className="flex flex-col sm:flex-row items-center gap-3 bg-[#0f172a] p-3 rounded-xl border border-indigo-950/40">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleTermsImageFileChange(imgIdx, e)}
+                    className="text-xs text-gray-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-900/50 file:text-indigo-300 hover:file:bg-indigo-900"
+                  />
+                  {img.preview && (
+                    <img src={img.preview} alt="preview" className="w-12 h-12 object-cover rounded-lg border border-indigo-900/50" />
+                  )}
+                  <input
+                    type="text"
+                    placeholder="คำอธิบายรูปภาพ..."
+                    value={img.caption || ''}
+                    onChange={(e) => handleTermsImageCaptionChange(imgIdx, e.target.value)}
+                    className="flex-1 px-3 py-1.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTermsImageRow(imgIdx)}
+                    className="p-1.5 text-rose-500 hover:text-rose-400 transition cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
             </div>
 
             <div className="bg-[#1e293b]/40 p-6 rounded-2xl border border-indigo-950/40 space-y-2">
@@ -790,6 +862,7 @@ export default function PoliceRulesCRUD() {
                 value={footerNote}
                 onChange={(e) => setFooterNote(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl bg-[#0f172a] border border-amber-500/30 text-amber-300 text-xs"
+                placeholder="หมายเหตุเพิ่มเติม..."
               />
             </div>
 
@@ -798,46 +871,6 @@ export default function PoliceRulesCRUD() {
               <button type="button" onClick={() => setView('table')} className="px-8 py-2.5 rounded-full font-bold text-white bg-rose-600 hover:bg-rose-500 cursor-pointer">Cancel</button>
             </div>
           </form>
-        </div>
-      )}
-
-      {/* --- POPUP MODAL FOR SELECT FORM TYPE --- */}
-      {isSelectModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-[#1e293b] border border-indigo-950/80 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-6">
-            <div className="text-center space-y-1">
-              <h3 className="text-xl font-bold text-white">เลือกรูปแบบข้อมูล</h3>
-              <p className="text-xs text-indigo-300">กรุณาเลือกประเภทรูปแบบที่คุณต้องการสร้าง</p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3">
-              <button
-                onClick={() => handleSelectFormType('terms')}
-                className="p-4 bg-[#0f172a] hover:bg-indigo-950/60 border border-indigo-900/50 hover:border-indigo-500 rounded-xl text-left transition space-y-1 cursor-pointer group shadow"
-              >
-                <h4 className="font-bold text-white text-base group-hover:text-indigo-300 transition">กฎ</h4>
-                <p className="text-xs text-gray-400">ฟอร์มกฎแบบมีหัวข้อหลัก กลุ่มย่อย ข้อ และข้อย่อยแบบลำดับชั้น</p>
-              </button>
-
-              <button
-                onClick={() => handleSelectFormType('police')}
-                className="p-4 bg-[#0f172a] hover:bg-indigo-950/60 border border-indigo-900/50 hover:border-indigo-500 rounded-xl text-left transition space-y-1 cursor-pointer group shadow"
-              >
-                <h4 className="font-bold text-white text-base group-hover:text-indigo-300 transition">ค่าปรับ</h4>
-                <p className="text-xs text-gray-400">ฟอร์มสำหรับกฎที่มีการระบุค่าปรับและเวลาจำคุก</p>
-              </button>
-            </div>
-
-            <div className="text-center pt-2">
-              <button
-                type="button"
-                onClick={() => setIsSelectModalOpen(false)}
-                className="px-6 py-2 rounded-full font-bold text-gray-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition cursor-pointer text-xs"
-              >
-                ยกเลิก
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

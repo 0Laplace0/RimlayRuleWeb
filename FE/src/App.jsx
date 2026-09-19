@@ -5,6 +5,7 @@ import ActivityRulesView from '@/page/ActivityRulesView.jsx';
 import ActivityRules from "@/page/ActivityRules.jsx";
 import Safezone from "@/page/SafezoneRules.jsx";
 import RoleplayRules from "@/page/RoleplayRules.jsx";
+import UnifiedRules from '@/page/UnifiedRules';
 import PoliceRules from "@/page/PoliceRules.jsx";
 import DoctorRules from "@/page/DoctorRules.jsx";
 import CouncilRules from "@/page/CouncilRules.jsx";
@@ -23,6 +24,7 @@ function App() {
       <Route path="/activity-rules" element={<ActivityRules />} />
       <Route path="/safezone-rules" element={<Safezone />} />
       <Route path="/roleplay-rules" element={<RoleplayRules />} />
+      <Route path="/unified-rules" element={<UnifiedRules />} />
       <Route path="/police-rules" element={<PoliceRules />} />
       <Route path="/doctor-rules" element={<DoctorRules />} />
       <Route path="/council-rules" element={<CouncilRules />} />

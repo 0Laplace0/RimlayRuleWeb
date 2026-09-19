@@ -9,21 +9,65 @@
         "subTitle": "กฎสภา",
         "rules": [
           {
-            "text": "กฎสภา",
+            "textDelta": {
+              "ops": [
+                {
+                  "attributes": {
+                    "underline": true,
+                    "bold": true
+                  },
+                  "insert": "กฎสภา"
+                },
+                {
+                  "insert": "\n"
+                }
+              ]
+            },
             "subItems": [
               {
-                "text": "กฎสภา"
+                "textDelta": {
+                  "ops": [
+                    {
+                      "attributes": {
+                        "color": "#e60000",
+                        "background": "#ffff00"
+                      },
+                      "insert": "กฎสภา"
+                    },
+                    {
+                      "insert": "\n"
+                    }
+                  ]
+                }
               },
               {
-                "text": "กฎสภา"
+                "textDelta": {
+                  "ops": [
+                    {
+                      "insert": "กฎสภา"
+                    }
+                  ]
+                }
               }
             ]
           },
           {
-            "text": "กฎสภา",
+            "textDelta": {
+              "ops": [
+                {
+                  "insert": "กฎสภา"
+                }
+              ]
+            },
             "subItems": [
               {
-                "text": "กฎสภา"
+                "textDelta": {
+                  "ops": [
+                    {
+                      "insert": "กฎสภา"
+                    }
+                  ]
+                }
               }
             ]
           }
@@ -38,7 +82,8 @@
       }
     ],
     "footerNote": "กฎสภา",
-    "createdAt": "2026-09-17T09:02:05.286Z"
+    "createdAt": "2026-09-17T09:02:05.286Z",
+    "updatedAt": "2026-09-19T14:40:15.304Z"
   },
   {
     "id": "1789635916968",
@@ -50,14 +95,47 @@
         "subTitle": "ข้อมูล",
         "rules": [
           {
-            "text": "ข้อมูล",
-            "subItems": []
+            "textDelta": {
+              "ops": [
+                {
+                  "insert": "ข้อมูล"
+                }
+              ]
+            },
+            "subItems": [
+              {
+                "textDelta": {
+                  "ops": [
+                    {
+                      "attributes": {
+                        "color": "#e60000",
+                        "background": "#ffff00"
+                      },
+                      "insert": "ข้อมูล"
+                    },
+                    {
+                      "insert": "\n"
+                    }
+                  ]
+                }
+              },
+              {
+                "textDelta": {
+                  "ops": [
+                    {
+                      "insert": "ข้อมูล\n"
+                    }
+                  ]
+                }
+              }
+            ]
           }
         ]
       }
     ],
     "images": [],
-    "footerNote": "",
-    "createdAt": "2026-09-17T09:05:16.968Z"
+    "footerNote": "ข้อมูล",
+    "createdAt": "2026-09-17T09:05:16.968Z",
+    "updatedAt": "2026-09-19T14:41:46.714Z"
   }
 ]

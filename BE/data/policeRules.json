@@ -9,21 +9,58 @@
         "subTitle": "Police",
         "rules": [
           {
-            "text": "Police",
+            "textDelta": {
+              "ops": [
+                {
+                  "insert": "Police"
+                }
+              ]
+            },
             "subItems": [
               {
-                "text": "Police"
+                "textDelta": {
+                  "ops": [
+                    {
+                      "attributes": {
+                        "color": "#e60000",
+                        "background": "#ffff00"
+                      },
+                      "insert": "Police"
+                    },
+                    {
+                      "insert": "\n"
+                    }
+                  ]
+                }
               },
               {
-                "text": "Police"
+                "textDelta": {
+                  "ops": [
+                    {
+                      "insert": "Police"
+                    }
+                  ]
+                }
               }
             ]
           },
           {
-            "text": "Police",
+            "textDelta": {
+              "ops": [
+                {
+                  "insert": "Police"
+                }
+              ]
+            },
             "subItems": [
               {
-                "text": "Police"
+                "textDelta": {
+                  "ops": [
+                    {
+                      "insert": "Police"
+                    }
+                  ]
+                }
               }
             ]
           }
@@ -44,7 +81,7 @@
     ],
     "footerNote": "Police",
     "createdAt": "2026-09-15T14:41:23.824Z",
-    "updatedAt": "2026-09-15T17:10:33.201Z"
+    "updatedAt": "2026-09-19T14:54:46.688Z"
   },
   {
     "id": "1789483305566",
@@ -56,14 +93,33 @@
         "subTitle": "ค่าปรับ",
         "rules": [
           {
-            "text": "ค่าปรับ",
+            "textDelta": {
+              "ops": [
+                {
+                  "insert": "ค่าปรับ"
+                }
+              ]
+            },
             "penaltyValue": "10333 asdasd",
-            "jailTime": "10 asdas"
+            "jailValue": "20"
           },
           {
-            "text": "ค่าปรับ",
+            "textDelta": {
+              "ops": [
+                {
+                  "attributes": {
+                    "underline": true,
+                    "bold": true
+                  },
+                  "insert": "ค่าปรับ"
+                },
+                {
+                  "insert": "\n"
+                }
+              ]
+            },
             "penaltyValue": "1022 asdsad",
-            "jailTime": "20 gsdfg"
+            "jailValue": "20"
           }
         ]
       }
@@ -71,6 +127,6 @@
     "images": [],
     "footerNote": "ค่าปรับ",
     "createdAt": "2026-09-15T14:41:45.566Z",
-    "updatedAt": "2026-09-15T17:10:06.624Z"
+    "updatedAt": "2026-09-19T15:22:00.433Z"
   }
 ]

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { swalUtils } from '../../utils/swalUtils.js';
 import Pagination from '../Pagination';
+import QuillEditor from '../QuillEditor.jsx';
 
 export default function DoctorRulesCRUD() {
   // --- STATES ---
@@ -21,12 +22,12 @@ export default function DoctorRulesCRUD() {
   const [title, setTitle] = useState('');
   const [footerNote, setFooterNote] = useState('');
   
-  // 1. Treatment Rules SubGroups (สำหรับฟอร์มค่ารักษา/อัตราค่าบริการ)
+  // 1. Treatment Rules SubGroups (ใช้ textDelta ร่วมกับ QuillEditor)
   const [treatmentSubGroups, setTreatmentSubGroups] = useState([
-    { subTitle: '', rules: [{ text: '', penaltyValue: '' }] }
+    { subTitle: '', rules: [{ textDelta: { ops: [{ insert: '' }] }, penaltyValue: '' }] }
   ]);
 
-  // 2. Terms Rules SubGroups (มี subItems สำหรับกฎทั่วไปของแพทย์)
+  // 2. Terms Rules SubGroups (ใช้ textDelta และ QuillEditor ทั้งข้อใหญ่และข้อย่อย)
   const [termsSubGroups, setTermsSubGroups] = useState([
     { 
       subId: `temp_${Date.now()}`, 
@@ -34,7 +35,7 @@ export default function DoctorRulesCRUD() {
       rules: [
         { 
           ruleId: `temp_${Date.now()}`, 
-          text: '', 
+          textDelta: { ops: [{ insert: '' }] }, 
           subItems: [] 
         }
       ] 
@@ -43,6 +44,13 @@ export default function DoctorRulesCRUD() {
 
   // 3. Terms Images State (สำหรับฟอร์มกฎที่มีรูปภาพ)
   const [termsImages, setTermsImages] = useState([]);
+
+  // --- Helper function สำหรับแปลง Text/Delta ---
+  const normalizeDelta = (val) => {
+    if (!val) return { ops: [{ insert: '' }] };
+    if (typeof val === 'object' && val.ops) return val;
+    return { ops: [{ insert: String(val) }] };
+  };
 
   const getAuthHeader = () => {
     const token = localStorage.getItem('token');
@@ -71,13 +79,16 @@ export default function DoctorRulesCRUD() {
     setEditingId(null);
     setTitle('');
     setFooterNote('');
-    setTreatmentSubGroups([{ subTitle: '', rules: [{ text: '', penaltyValue: '' }] }]);
-    setTermsSubGroups([{ subId: `temp_${Date.now()}`, subTitle: '', rules: [{ ruleId: `temp_${Date.now()}`, text: '', subItems: [] }] }]);
+    setTreatmentSubGroups([{ subTitle: '', rules: [{ textDelta: { ops: [{ insert: '' }] }, penaltyValue: '' }] }]);
+    setTermsSubGroups([{ 
+      subId: `temp_${Date.now()}`, 
+      subTitle: '', 
+      rules: [{ ruleId: `temp_${Date.now()}`, textDelta: { ops: [{ insert: '' }] }, subItems: [] }] 
+    }]);
     setTermsImages([]);
     setView('table');
   };
 
-  // เปิด Popup เลือกประเภทฟอร์ม
   const handleOpenSelectModal = () => {
     resetForm();
     setIsSelectModalOpen(true);
@@ -108,16 +119,19 @@ export default function DoctorRulesCRUD() {
         subTitle: sg.subTitle || sg.sub_title || sg.name || '',
         rules: (sg.rules || sg.items || []).map(r => ({
           ruleId: r.ruleId || r.id || `temp_${Date.now()}`,
-          text: r.text || r.rule_text || '',
+          textDelta: normalizeDelta(r.textDelta || r.text),
           subItems: (r.subItems || r.sub_items || []).map(si => ({
             subItemId: si.subItemId || si.id || `temp_${Date.now()}`,
-            text: si.text || si.content || ''
+            textDelta: normalizeDelta(si.textDelta || si.text)
           }))
         }))
       }));
-      setTermsSubGroups(mappedTerms.length > 0 ? mappedTerms : [{ subId: `temp_${Date.now()}`, subTitle: '', rules: [] }]);
+      setTermsSubGroups(mappedTerms.length > 0 ? mappedTerms : [{ 
+        subId: `temp_${Date.now()}`, 
+        subTitle: '', 
+        rules: [{ ruleId: `temp_${Date.now()}`, textDelta: { ops: [{ insert: '' }] }, subItems: [] }] 
+      }]);
 
-      // Map รูปภาพสำหรับฟอร์มกฎ
       const copiedImages = (category.images || []).map(img => ({
         id: img.id,
         caption: img.caption || '',
@@ -132,11 +146,11 @@ export default function DoctorRulesCRUD() {
       const mappedTreatment = rawSubGroups.map(sub => ({
         subTitle: sub.subTitle || sub.sub_title || '',
         rules: (sub.rules || sub.items || []).map(r => ({
-          text: r.text || '',
+          textDelta: normalizeDelta(r.textDelta || r.text),
           penaltyValue: r.penaltyValue || r.penalty_value || ''
         }))
       }));
-      setTreatmentSubGroups(mappedTreatment.length > 0 ? mappedTreatment : [{ subTitle: '', rules: [{ text: '', penaltyValue: '' }] }]);
+      setTreatmentSubGroups(mappedTreatment.length > 0 ? mappedTreatment : [{ subTitle: '', rules: [{ textDelta: { ops: [{ insert: '' }] }, penaltyValue: '' }] }]);
       setView('form-treatment');
     }
   };
@@ -178,8 +192,10 @@ export default function DoctorRulesCRUD() {
       const formattedSubGroups = termsSubGroups.map(sg => ({
         subTitle: sg.subTitle || '',
         rules: (sg.rules || []).map(r => ({
-          text: r.text || '',
-          subItems: (r.subItems || []).map(si => ({ text: si.text || '' }))
+          textDelta: r.textDelta || { ops: [{ insert: '' }] },
+          subItems: (r.subItems || []).map(si => ({
+            textDelta: si.textDelta || { ops: [{ insert: '' }] }
+          }))
         }))
       }));
 
@@ -211,7 +227,13 @@ export default function DoctorRulesCRUD() {
         title: title.trim(),
         footerNote: footerNote.trim(),
         footer_note: footerNote.trim(),
-        subGroups: treatmentSubGroups
+        subGroups: treatmentSubGroups.map(sg => ({
+          subTitle: sg.subTitle || '',
+          rules: sg.rules.map(r => ({
+            textDelta: r.textDelta || { ops: [{ insert: '' }] },
+            penaltyValue: r.penaltyValue || ''
+          }))
+        }))
       };
     }
 
@@ -240,7 +262,7 @@ export default function DoctorRulesCRUD() {
 
   // --- TREATMENT FORM HANDLERS ---
   const handleAddTreatmentSubGroup = () => {
-    setTreatmentSubGroups([...treatmentSubGroups, { subTitle: '', rules: [{ text: '', penaltyValue: '' }] }]);
+    setTreatmentSubGroups([...treatmentSubGroups, { subTitle: '', rules: [{ textDelta: { ops: [{ insert: '' }] }, penaltyValue: '' }] }]);
   };
   const handleRemoveTreatmentSubGroup = (subIdx) => {
     setTreatmentSubGroups(treatmentSubGroups.filter((_, idx) => idx !== subIdx));
@@ -252,7 +274,7 @@ export default function DoctorRulesCRUD() {
   };
   const handleAddTreatmentRule = (subIdx) => {
     const updated = [...treatmentSubGroups];
-    updated[subIdx].rules.push({ text: '', penaltyValue: '' });
+    updated[subIdx].rules.push({ textDelta: { ops: [{ insert: '' }] }, penaltyValue: '' });
     setTreatmentSubGroups(updated);
   };
   const handleRemoveTreatmentRule = (subIdx, ruleIdx) => {
@@ -266,11 +288,15 @@ export default function DoctorRulesCRUD() {
     setTreatmentSubGroups(updated);
   };
 
-  // --- TERMS FORM HANDLERS ---
+  // --- TERMS FORM HANDLERS (QuillEditor / Delta) ---
   const handleAddTermsSubGroup = () => {
     setTermsSubGroups([
       ...termsSubGroups, 
-      { subId: `temp_${Date.now()}`, subTitle: '', rules: [{ ruleId: `temp_${Date.now()}`, text: '', subItems: [] }] }
+      { 
+        subId: `temp_${Date.now()}_${Math.random()}`, 
+        subTitle: '', 
+        rules: [{ ruleId: `temp_rule_${Date.now()}_${Math.random()}`, textDelta: { ops: [{ insert: '' }] }, subItems: [] }] 
+      }
     ]);
   };
   const handleRemoveTermsSubGroup = (subId) => {
@@ -284,7 +310,7 @@ export default function DoctorRulesCRUD() {
       if (sg.subId === subId) {
         return {
           ...sg,
-          rules: [...sg.rules, { ruleId: `temp_${Date.now()}`, text: '', subItems: [] }]
+          rules: [...sg.rules, { ruleId: `temp_rule_${Date.now()}_${Math.random()}`, textDelta: { ops: [{ insert: '' }] }, subItems: [] }]
         };
       }
       return sg;
@@ -298,12 +324,12 @@ export default function DoctorRulesCRUD() {
       return sg;
     }));
   };
-  const handleUpdateTermsRuleText = (subId, ruleId, value) => {
+  const handleUpdateTermsRuleDelta = (subId, ruleId, delta) => {
     setTermsSubGroups(termsSubGroups.map(sg => {
       if (sg.subId === subId) {
         return {
           ...sg,
-          rules: sg.rules.map(r => r.ruleId === ruleId ? { ...r, text: value } : r)
+          rules: sg.rules.map(r => r.ruleId === ruleId ? { ...r, textDelta: delta } : r)
         };
       }
       return sg;
@@ -314,7 +340,10 @@ export default function DoctorRulesCRUD() {
       if (sg.subId === subId) {
         return {
           ...sg,
-          rules: sg.rules.map(r => r.ruleId === ruleId ? { ...r, subItems: [...r.subItems, { subItemId: `temp_${Date.now()}`, text: '' }] } : r)
+          rules: sg.rules.map(r => r.ruleId === ruleId ? { 
+            ...r, 
+            subItems: [...r.subItems, { subItemId: `temp_subitem_${Date.now()}_${Math.random()}`, textDelta: { ops: [{ insert: '' }] } }] 
+          } : r)
         };
       }
       return sg;
@@ -331,14 +360,14 @@ export default function DoctorRulesCRUD() {
       return sg;
     }));
   };
-  const handleUpdateTermsSubItem = (subId, ruleId, subItemId, value) => {
+  const handleUpdateTermsSubItemDelta = (subId, ruleId, subItemId, delta) => {
     setTermsSubGroups(termsSubGroups.map(sg => {
       if (sg.subId === subId) {
         return {
           ...sg,
           rules: sg.rules.map(r => r.ruleId === ruleId ? {
             ...r,
-            subItems: r.subItems.map(si => si.subItemId === subItemId ? { ...si, text: value } : si)
+            subItems: r.subItems.map(si => si.subItemId === subItemId ? { ...si, textDelta: delta } : si)
           } : r)
         };
       }
@@ -401,7 +430,6 @@ export default function DoctorRulesCRUD() {
         <div>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <h2 className="text-2xl font-bold text-white">จัดการข้อมูล: กฎ & ค่ารักษา (แพทย์)</h2>
-            
             <div className="flex items-center gap-3 w-full md:w-auto">
               <input
                 type="text"
@@ -475,7 +503,6 @@ export default function DoctorRulesCRUD() {
             />
           )}
 
-          {/* Modal สำหรับเลือกรูปแบบฟอร์มตอนเพิ่มข้อมูล */}
           {isSelectModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
               <div className="bg-[#1e293b] border border-indigo-950 rounded-2xl max-w-md w-full p-6 space-y-6 shadow-2xl">
@@ -516,7 +543,7 @@ export default function DoctorRulesCRUD() {
           )}
         </div>
       ) : view === 'form-treatment' ? (
-        /* --- TREATMENT FORM VIEW (ค่ารักษา) --- */
+        /* --- TREATMENT FORM VIEW (ค่ารักษา - ใช้ QuillEditor) --- */
         <div className="space-y-6">
           <div className="bg-[#1e293b] border border-indigo-950/60 py-4 px-6 rounded-lg text-center shadow-lg">
             <h1 className="text-lg font-bold text-indigo-300 tracking-wide">
@@ -539,7 +566,6 @@ export default function DoctorRulesCRUD() {
               </div>
             </div>
 
-            {/* SubGroups for Treatment */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-indigo-950/40 pb-2">
                 <h3 className="text-md font-bold text-indigo-300">หมวดหมู่กลุ่มย่อย & รายการ</h3>
@@ -568,43 +594,44 @@ export default function DoctorRulesCRUD() {
                   </div>
 
                   <div className="space-y-3 pl-0 sm:pl-6">
-                    {sub.rules.map((rule, ruleIdx) => (
-                      <div key={ruleIdx} className="bg-[#0f172a] p-4 rounded-xl border border-indigo-950/40 space-y-3">
-                        <div className="flex items-start gap-2">
-                          <span className="text-indigo-400 font-bold pt-2">{ruleIdx + 1}.</span>
-                          <textarea
-                            rows="2"
-                            required
-                            placeholder="รายละเอียดการรักษา..."
-                            value={rule.text}
-                            onChange={(e) => handleTreatmentRuleChange(subIdx, ruleIdx, 'text', e.target.value)}
-                            className="flex-1 px-3 py-2 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-gray-200 text-sm focus:outline-none focus:border-indigo-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveTreatmentRule(subIdx, ruleIdx)}
-                            className="p-2.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer"
-                            title="ลบข้อนี้"
-                          >
-                            🗑
-                          </button>
-                        </div>
+                    {sub.rules.map((rule, ruleIdx) => {
+                      const ruleDelta = normalizeDelta(rule.textDelta || rule.text);
+                      return (
+                        <div key={ruleIdx} className="bg-[#0f172a] p-4 rounded-xl border border-indigo-950/40 space-y-3">
+                          <div className="flex items-start gap-2">
+                            <span className="text-indigo-400 font-bold pt-2">{ruleIdx + 1}.</span>
+                            <div className="flex-1 bg-[#1e293b] rounded-xl overflow-hidden border border-indigo-900/40 text-white">
+                              <QuillEditor
+                                value={ruleDelta}
+                                onChange={(delta) => handleTreatmentRuleChange(subIdx, ruleIdx, 'textDelta', delta)}
+                                placeholder="รายละเอียดการรักษา..."
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveTreatmentRule(subIdx, ruleIdx)}
+                              className="p-2.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer mt-1"
+                              title="ลบข้อนี้"
+                            >
+                              🗑
+                            </button>
+                          </div>
 
-                        {/* Penalty / Treatment Value */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
-                          <div>
-                            <label className="text-xs text-gray-400 mb-1 block">ค่ารักษา</label>
-                            <input
-                              type="text"
-                              placeholder="เช่น 5,000 บาท"
-                              value={rule.penaltyValue}
-                              onChange={(e) => handleTreatmentRuleChange(subIdx, ruleIdx, 'penaltyValue', e.target.value)}
-                              className="w-full px-3 py-1.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
-                            />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-6">
+                            <div>
+                              <label className="text-xs text-gray-400 mb-1 block">ค่ารักษา</label>
+                              <input
+                                type="text"
+                                placeholder="เช่น 5,000 บาท"
+                                value={rule.penaltyValue}
+                                onChange={(e) => handleTreatmentRuleChange(subIdx, ruleIdx, 'penaltyValue', e.target.value)}
+                                className="w-full px-3 py-1.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-xs text-white focus:outline-none focus:border-indigo-500"
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     <button type="button" onClick={() => handleAddTreatmentRule(subIdx)} className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer">
                       + เพิ่มรายการในกลุ่มนี้
@@ -632,7 +659,7 @@ export default function DoctorRulesCRUD() {
           </form>
         </div>
       ) : (
-        /* --- TERMS FORM VIEW (กฎ + รูปภาพ) --- */
+        /* --- TERMS FORM VIEW (กฎ + QuillEditor ข้อใหญ่และข้อย่อย + รูปภาพ) --- */
         <div className="space-y-6">
           <div className="bg-[#1e293b] border border-indigo-950/60 py-4 px-6 rounded-lg text-center shadow-lg">
             <h1 className="text-lg font-bold text-indigo-300 tracking-wide">
@@ -654,7 +681,6 @@ export default function DoctorRulesCRUD() {
               </div>
             </div>
 
-            {/* Sub-groups */}
             <div className="space-y-4">
               <div className="flex items-center justify-between border-b border-indigo-950/40 pb-2">
                 <h3 className="text-md font-bold text-indigo-300">หมวดหมู่กฎย่อย & ข้อย่อย (Sub-items)</h3>
@@ -684,135 +710,108 @@ export default function DoctorRulesCRUD() {
                   </div>
 
                   <div className="pl-0 sm:pl-14 space-y-4">
-                    {sg.rules.map((rule, ruleIndex) => (
-                      <div key={rule.ruleId} className="flex flex-col gap-4 bg-[#0f172a] p-4 rounded-xl border border-indigo-950/30">
-                        <div className="flex items-start gap-3">
-                          <span className="text-indigo-400 font-bold shrink-0 pt-2">{ruleIndex + 1}.</span>
-                          <div className="flex-1 flex items-center gap-2">
-                            <textarea
-                              rows="2"
-                              required
-                              placeholder="รายละเอียดข้อใหญ่..."
-                              value={rule.text}
-                              onChange={(e) => handleUpdateTermsRuleText(sg.subId, rule.ruleId, e.target.value)}
-                              className="w-full px-4 py-2.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg outline-none text-gray-200 text-sm focus:border-indigo-500 resize-y"
-                            />
-                            <button 
-                              type="button" 
-                              onClick={() => handleRemoveTermsRule(sg.subId, rule.ruleId)} 
-                              className="p-3 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0" 
-                              title="ลบข้อใหญ่"
+                    {sg.rules.map((rule, ruleIndex) => {
+                      const ruleDelta = normalizeDelta(rule.textDelta || rule.text);
+                      return (
+                        <div key={rule.ruleId} className="flex flex-col gap-4 bg-[#0f172a] p-4 rounded-xl border border-indigo-950/30">
+                          <div className="flex items-start gap-3">
+                            <span className="text-indigo-400 font-bold shrink-0 pt-2">{ruleIndex + 1}.</span>
+                            <div className="flex-1 flex items-start gap-2">
+                              <div className="flex-1 bg-[#1e293b] rounded-xl overflow-hidden border border-indigo-900/40 text-white">
+                                <QuillEditor
+                                  value={ruleDelta}
+                                  onChange={(delta) => handleUpdateTermsRuleDelta(sg.subId, rule.ruleId, delta)}
+                                  placeholder="รายละเอียดข้อใหญ่..."
+                                />
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => handleRemoveTermsRule(sg.subId, rule.ruleId)} 
+                                className="p-3 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0 mt-1" 
+                                title="ลบข้อใหญ่"
+                              >
+                                🗑
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* ข้อย่อยใช้ QuillEditor ด้วย */}
+                          <div className="pl-6 pt-1 space-y-3">
+                            {rule.subItems.map((subItem, subItemIndex) => {
+                              const subItemDelta = normalizeDelta(subItem.textDelta || subItem.text);
+                              return (
+                                <div key={subItem.subItemId} className="flex items-start gap-2">
+                                  <span className="text-indigo-400/80 font-semibold shrink-0 pt-2">{ruleIndex + 1}.{subItemIndex + 1}</span>
+                                  <div className="flex-1 bg-[#1e293b] rounded-xl overflow-hidden border border-indigo-900/40 text-white">
+                                    <QuillEditor
+                                      value={subItemDelta}
+                                      onChange={(delta) => handleUpdateTermsSubItemDelta(sg.subId, rule.ruleId, subItem.subItemId, delta)}
+                                      placeholder="รายละเอียดข้อย่อย..."
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveTermsSubItem(sg.subId, rule.ruleId, subItem.subItemId)}
+                                    className="p-2.5 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0 mt-1"
+                                    title="ลบข้อย่อย"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              );
+                            })}
+                            <button
+                              type="button"
+                              onClick={() => handleAddTermsSubItem(sg.subId, rule.ruleId)}
+                              className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer"
                             >
-                              🗑
+                              + เพิ่มข้อย่อย (Sub-item)
                             </button>
                           </div>
                         </div>
-
-                        <div className="pl-6 pt-1 space-y-2">
-                          {rule.subItems.map((subItem, subItemIndex) => (
-                            <div key={subItem.subItemId} className="flex items-center gap-2">
-                              <span className="text-xs text-indigo-400 font-bold shrink-0">{ruleIndex + 1}.{subItemIndex + 1}</span>
-                              <input
-                                type="text"
-                                placeholder={`รายละเอียดข้อย่อยที่ ${ruleIndex + 1}.${subItemIndex + 1}...`}
-                                value={subItem.text}
-                                onChange={(e) => handleUpdateTermsSubItem(sg.subId, rule.ruleId, subItem.subItemId, e.target.value)}
-                                className="flex-1 px-3 py-2 bg-[#1e293b] border border-indigo-900/40 rounded-lg outline-none text-gray-200 text-xs focus:border-indigo-500"
-                              />
-                              <button 
-                                type="button" 
-                                onClick={() => handleRemoveTermsSubItem(sg.subId, rule.ruleId, subItem.subItemId)} 
-                                className="p-2 bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white rounded-lg transition cursor-pointer shrink-0"
-                                title="ลบข้อย่อย"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ))}
-                          <button type="button" onClick={() => handleAddTermsSubItem(sg.subId, rule.ruleId)} className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer pt-1">
-                            + เพิ่มข้อย่อย
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-
-                    <button type="button" onClick={() => handleAddTermsRule(sg.subId)} className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer">
-                      + เพิ่มข้อใหญ่
+                      );
+                    })}
+                    <button type="button" onClick={() => handleAddTermsRule(sg.subId)} className="text-xs text-blue-400 hover:text-blue-300 font-semibold cursor-pointer">
+                      + เพิ่มข้อใหญ่ในกลุ่มนี้
                     </button>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* --- รูปภาพประกอบ (แยกภาพตัวอย่างออกจากกรอบ Choose File โดยจัดวางเรียงเคียงกัน) --- */}
-            <div className="space-y-4 pt-4 border-t border-indigo-950/40">
+            {/* ส่วนจัดการรูปภาพ (Terms Images) */}
+            <div className="bg-[#1e293b]/40 p-6 rounded-2xl border border-indigo-950/40 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-md font-bold text-indigo-300">รูปภาพประกอบ และชื่อภาพ</h3>
-                <button
-                  type="button"
-                  onClick={handleAddTermsImageRow}
-                  className="px-4 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-400 rounded-full text-xs font-bold transition cursor-pointer"
-                >
+                <label className="text-gray-400 font-semibold block text-xs">รูปภาพประกอบ (ถ้ามี)</label>
+                <button type="button" onClick={handleAddTermsImageRow} className="px-3 py-1 bg-indigo-600/20 text-indigo-400 rounded-full text-xs font-bold hover:bg-indigo-600/40 transition">
                   + เพิ่มรูปภาพ
                 </button>
               </div>
-
-              {termsImages.map((img, index) => (
-                <div key={img.id || img.tempId || index} className="bg-[#1e293b]/80 p-5 rounded-2xl border border-indigo-900/30 space-y-3 relative">
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTermsImageRow(index)}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-rose-500 cursor-pointer"
-                    title="ลบรูปภาพนี้"
-                  >
-                    ✕
+              {termsImages.map((img, idx) => (
+                <div key={img.id || img.tempId || idx} className="flex flex-col sm:flex-row items-center gap-3 bg-[#0f172a] p-3 rounded-xl border border-indigo-950/40">
+                  {img.preview ? (
+                    <img src={img.preview} alt="preview" className="w-16 h-16 object-cover rounded-lg" />
+                  ) : (
+                    <div className="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center text-xs text-gray-500">No Image</div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleTermsImageFileChange(idx, e)}
+                    className="text-xs text-gray-300"
+                  />
+                  <input
+                    type="text"
+                    placeholder="คำบรรยายภาพ (caption)..."
+                    value={img.caption}
+                    onChange={(e) => handleTermsImageCaptionChange(idx, e.target.value)}
+                    className="flex-1 px-3 py-1.5 bg-[#1e293b] border border-indigo-900/40 rounded-lg text-xs text-white"
+                  />
+                  <button type="button" onClick={() => handleRemoveTermsImageRow(idx)} className="text-rose-500 hover:text-rose-400 text-xs font-bold">
+                    ลบ
                   </button>
-
-                  <div className="flex items-center gap-3 pr-8">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-900/40 border border-indigo-700/50 flex items-center justify-center shrink-0 shadow-inner">
-                      <span className="text-indigo-300 font-black text-sm">#{index + 1}</span>
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="ชื่อภาพประกอบ (Caption)..."
-                      value={img.caption}
-                      onChange={(e) => handleTermsImageCaptionChange(index, e.target.value)}
-                      className="flex-1 px-4 py-3 rounded-xl bg-[#0f172a] border border-indigo-950/60 text-white text-sm focus:outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <div className="pl-0 sm:pl-15">
-                    <div className="flex items-center gap-4">
-                      {/* กรอบ Choose File */}
-                      <div className="flex-1 bg-[#0f172a] border border-indigo-950/60 rounded-xl px-4 py-2.5 flex items-center gap-3">
-                        <label className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg cursor-pointer transition shadow-md shrink-0">
-                          Choose File
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleTermsImageFileChange(index, e)}
-                            className="hidden"
-                          />
-                        </label>
-                        <span className="text-xs text-gray-400 truncate">
-                          {img.file ? img.file.name : 'No file chosen'}
-                        </span>
-                      </div>
-
-                      {/* ภาพตัวอย่าง (แยกออกมาอยู่นอกกรอบทางขวา) */}
-                      {img.preview && (
-                        <div className="shrink-0">
-                          <img src={img.preview} alt="Preview" className="h-12 w-20 sm:h-14 sm:w-24 rounded-lg border border-indigo-900/50 object-cover shadow" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
               ))}
-
-              {termsImages.length === 0 && (
-                <p className="text-xs text-gray-500 italic">ยังไม่มีรูปภาพประกอบ (สามารถกดปุ่มเพิ่มรูปภาพด้านบนได้)</p>
-              )}
             </div>
 
             <div className="bg-[#1e293b]/40 p-6 rounded-2xl border border-indigo-950/40 space-y-2">
