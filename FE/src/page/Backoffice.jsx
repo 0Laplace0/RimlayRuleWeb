@@ -22,7 +22,7 @@ const Backoffice = () => {
 
   // ย้าย ActivityLog ขึ้นมาเป็นอันแรก
   const sidebarMenus = [
-    { id: 'Banner', name: '- จัดการแบนเนอร์ -' },
+    { id: 'Banner', name: '- จัดการ Banner และ Background -' },
     { id: 'Home', name: '- หน้าแรก -' },
     { id: 'CountryRules', name: '- จัดการกฎประเทศ -' },
     { id: 'ActivityRules', name: '- จัดการกฎกิจกรรม -' },

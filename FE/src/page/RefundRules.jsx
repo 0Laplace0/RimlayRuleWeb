@@ -25,7 +25,6 @@ export default function RefundPolicyRules() {
     }
   };
 
-  // --- Helper สำหรับแปลง Delta / JSON / Text เป็น JSX พร้อม Style สีและ Format ---
   const renderFormattedContent = (itemOrDelta) => {
     const raw = itemOrDelta?.textDelta || itemOrDelta?.text || itemOrDelta;
     if (!raw) return '';
@@ -69,9 +68,9 @@ export default function RefundPolicyRules() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-transparent text-white">
         <Navbar />
-        <div className="flex justify-center items-center min-h-[60vh] text-gray-600">
+        <div className="flex justify-center items-center min-h-[60vh] text-[#80deea] animate-pulse">
           กำลังโหลดข้อมูล...
         </div>
       </div>
@@ -80,9 +79,9 @@ export default function RefundPolicyRules() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-transparent text-white">
         <Navbar />
-        <div className="flex justify-center items-center min-h-[60vh] text-red-500">
+        <div className="flex justify-center items-center min-h-[60vh] text-rose-500">
           {error}
         </div>
       </div>
@@ -90,15 +89,15 @@ export default function RefundPolicyRules() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 font-sans">
+    <div className="min-h-screen bg-transparent text-white flex flex-col w-full relative overflow-x-hidden">
       <Navbar />
-      <Banner />
+      <Banner manageGlobalBackground={true} />
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-center text-gray-900 mb-4 tracking-wide">
+      <div className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h1 className="text-3xl font-bold text-center text-white mb-4 tracking-wide">
           Refund Policy
         </h1>
-        <hr className="border-t border-gray-300 mb-8" />
+        <hr className="border-t border-[#80deea]/30 mb-8" />
 
         <div className="space-y-6">
           {refundData.map((section, index) => {
@@ -106,9 +105,9 @@ export default function RefundPolicyRules() {
             const footerText = section.footerNote || section.footer_note;
 
             return (
-              <div key={section.id || index} className="space-y-3">
+              <div key={section.id || index} className="space-y-4 bg-[#111a1f]/80 border border-[#80deea]/40 rounded-2xl p-6 shadow-lg">
                 {/* หัวข้อหลัก */}
-                <h2 className="text-lg md:text-xl font-bold text-gray-900 leading-relaxed">
+                <h2 className="text-xl md:text-2xl font-bold text-white leading-relaxed border-b border-[#80deea]/20 pb-3">
                   {section.title}
                 </h2>
 
@@ -122,34 +121,34 @@ export default function RefundPolicyRules() {
                         <div key={sub.subId || sub.id || subIdx} className="space-y-2">
                           {/* หัวข้อย่อย */}
                           {subTitleText && (
-                            <p className="font-semibold text-gray-800 text-sm">
+                            <p className="font-semibold text-[#80deea] text-base border-l-4 border-[#80deea] pl-3 py-0.5">
                               {subIdx + 1}. {subTitleText}
                             </p>
                           )}
 
                           {rulesList.length > 0 && (
-                            <ul className="space-y-2 pl-2">
+                            <ul className="space-y-2 pl-4">
                               {rulesList.map((rule, ruleIdx) => {
                                 const subItems = rule.subItems || rule.sub_items || [];
 
                                 return (
-                                  <li key={rule.ruleId || rule.id || ruleIdx} className="flex items-start text-sm text-gray-700 leading-relaxed">
-                                    <span className="font-medium mr-2 min-w-[28px] shrink-0">
+                                  <li key={rule.ruleId || rule.id || ruleIdx} className="flex items-start text-sm text-gray-300 leading-relaxed">
+                                    <span className="font-medium mr-2 min-w-[32px] shrink-0 text-[#80deea]">
                                       {subIdx + 1}.{ruleIdx + 1}
                                     </span>
                                     <div className="flex-1 whitespace-pre-wrap">
                                       <span>{renderFormattedContent(rule)}</span>
 
                                       {rule.penaltyValue && (
-                                        <span className="text-red-600 font-medium ml-1">
+                                        <span className="text-red-400 font-semibold ml-2 bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded text-xs">
                                           {rule.penaltyValue}
                                         </span>
                                       )}
 
                                       {subItems.length > 0 && (
-                                        <ul className="list-disc pl-5 mt-1 space-y-1">
+                                        <ul className="list-disc pl-5 mt-1.5 space-y-1">
                                           {subItems.map((si, siIdx) => (
-                                            <li key={si.subItemId || si.id || siIdx} className="text-gray-600 whitespace-pre-wrap">
+                                            <li key={si.subItemId || si.id || siIdx} className="text-gray-400 whitespace-pre-wrap">
                                               {renderFormattedContent(si)}
                                             </li>
                                           ))}
@@ -169,9 +168,9 @@ export default function RefundPolicyRules() {
 
                 {/* หมายเหตุ */}
                 {footerText && (
-                  <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md border-l-4 border-gray-400 italic mt-2 ml-4">
-                    <span className="font-semibold not-italic text-gray-900">หมายเหตุ: </span>
-                    {footerText}
+                  <div className="text-sm text-[#80deea] bg-[#80deea]/10 p-4 rounded-xl border border-[#80deea]/40 mt-4">
+                    <strong className="text-white">หมายเหตุ: </strong>
+                    <span className="text-gray-300">{footerText}</span>
                   </div>
                 )}
               </div>

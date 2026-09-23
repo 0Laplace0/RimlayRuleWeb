@@ -33,7 +33,6 @@ export default function StreamingPolicy() {
     }
   };
 
-  // --- เพิ่มฟังก์ชันแปลง Delta/Text เป็น JSX ---
   const renderFormattedContent = (rule) => {
     const raw = rule.textDelta || rule.text;
     if (!raw) return '';
@@ -43,7 +42,7 @@ export default function StreamingPolicy() {
       try {
         deltaObj = JSON.parse(raw);
       } catch (e) {
-        return raw; // กรณีเป็น string ปกติ
+        return raw;
       }
     }
 
@@ -52,7 +51,6 @@ export default function StreamingPolicy() {
         if (typeof op.insert !== 'string') return null;
         const attrs = op.attributes || {};
 
-        // เตรียม Inline Style สำหรับสีฟอนต์และพื้นหลัง
         const style = {};
         if (attrs.color) style.color = attrs.color;
         if (attrs.background) style.backgroundColor = attrs.background;
@@ -79,13 +77,13 @@ export default function StreamingPolicy() {
   const renderPenaltyBadge = (penaltyValue) => {
     if (!penaltyValue) return null;
 
-    let badgeStyle = 'bg-gray-100 text-gray-700 border-gray-200';
+    let badgeStyle = 'bg-gray-800/60 text-gray-300 border-gray-600';
     if (penaltyValue.includes('ใบแดง') || penaltyValue.includes('ร้ายแรง')) {
-      badgeStyle = 'bg-red-50 text-red-600 border-red-200';
+      badgeStyle = 'bg-red-500/20 text-red-300 border-red-500/50';
     } else if (penaltyValue.includes('ใบส้ม') || penaltyValue.includes('พยายาม')) {
-      badgeStyle = 'bg-orange-50 text-orange-600 border-orange-200';
+      badgeStyle = 'bg-orange-500/20 text-orange-300 border-orange-500/50';
     } else if (penaltyValue.includes('ใบเหลือง')) {
-      badgeStyle = 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      badgeStyle = 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50';
     }
 
     return (
@@ -97,35 +95,35 @@ export default function StreamingPolicy() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-transparent text-white">
         <Navbar />
-        <div className="text-center py-20 text-gray-500">กำลังโหลดข้อมูล...</div>
+        <div className="text-center py-20 text-[#80deea] animate-pulse">กำลังโหลดข้อมูล...</div>
       </div>
     );
   }
 
   if (error || !policyData) {
     return (
-      <div className="min-h-screen bg-white">
+      <div className="min-h-screen bg-transparent text-white">
         <Navbar />
         <div className="text-center py-20">
-          <p className="text-red-500 mb-4">{error || 'ไม่พบข้อมูล'}</p>
-          <Link to="/" className="text-blue-600 underline">กลับสู่หน้าหลัก</Link>
+          <p className="text-rose-500 mb-4">{error || 'ไม่พบข้อมูล'}</p>
+          <Link to="/" className="text-[#80deea] underline">กลับสู่หน้าหลัก</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-transparent text-white flex flex-col w-full relative overflow-x-hidden">
       <Navbar />
-      <Banner />
+      <Banner manageGlobalBackground={true} />
 
-      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      <div className="flex-1 w-full max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         
         {/* หัวข้อหลัก */}
-        <div className="text-center pb-8 border-b border-gray-200 mb-10 pt-4">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight">
+        <div className="text-center pb-8 border-b border-[#80deea]/30 mb-10 pt-4">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
             {policyData.title}
           </h1>
         </div>
@@ -135,7 +133,7 @@ export default function StreamingPolicy() {
           {policyData.subGroups && policyData.subGroups.map((group, groupIdx) => (
             <div key={groupIdx} className="space-y-4">
               {group.subTitle && (
-                <h2 className="text-xl sm:text-2xl font-bold text-blue-600">
+                <h2 className="text-xl sm:text-2xl font-bold text-[#80deea]">
                   {group.subTitle}
                 </h2>
               )}
@@ -143,7 +141,7 @@ export default function StreamingPolicy() {
                 {group.rules && group.rules.map((rule, ruleIdx) => (
                   <div key={ruleIdx} className="space-y-1">
                     {renderPenaltyBadge(rule.penaltyValue)}
-                    <p className="text-gray-700 leading-relaxed text-base sm:text-lg whitespace-pre-wrap">
+                    <p className="text-gray-300 leading-relaxed text-base sm:text-lg whitespace-pre-wrap">
                       {renderFormattedContent(rule)}
                     </p>
                   </div>
@@ -155,9 +153,9 @@ export default function StreamingPolicy() {
 
         {/* หมายเหตุท้ายหน้า */}
         {policyData.footerNote && (
-          <div className="mt-16 pt-6 border-t border-gray-100">
-            <h3 className="text-lg font-bold text-blue-600 mb-2">หมายเหตุ</h3>
-            <p className="text-gray-600 text-sm sm:text-base leading-relaxed whitespace-pre-line">
+          <div className="mt-16 pt-6 border-t border-[#80deea]/30">
+            <h3 className="text-lg font-bold text-[#80deea] mb-2">หมายเหตุ</h3>
+            <p className="text-gray-400 text-sm sm:text-base leading-relaxed whitespace-pre-line">
               {policyData.footerNote}
             </p>
           </div>

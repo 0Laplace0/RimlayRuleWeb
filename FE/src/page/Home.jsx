@@ -87,9 +87,9 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0d11] text-white flex flex-col w-full relative overflow-x-hidden">
+    <div className="min-h-screen bg-transparent text-white flex flex-col w-full relative overflow-x-hidden">
       <Navbar />
-      <Banner />
+      <Banner manageGlobalBackground={true} />
 
       <div className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 space-y-10 relative z-10">
         {loading ? (
@@ -104,7 +104,7 @@ const Home = () => {
                 </h1>
               )}
 
-              {/* SubGroups / รายละเอียดแบบไม่มีกรอบ */}
+              {/* SubGroups */}
               <div className="text-gray-300 leading-relaxed space-y-6">
                 {section.subGroups && section.subGroups.length > 0 ? (
                   section.subGroups.map((group, idx) => (
@@ -118,7 +118,7 @@ const Home = () => {
                       {group.rules && group.rules.length > 0 ? (
                         <ul className="list-disc pl-6 space-y-2 text-gray-200">
                           {group.rules.map((rule, rIdx) => (
-                            <li key={rIdx} className="leading-relaxed whitespace-pre-wrap">
+                            <li key={rule.id || rIdx} className="leading-relaxed whitespace-pre-wrap">
                               {renderRuleText(rule)}
                             </li>
                           ))}
@@ -141,7 +141,7 @@ const Home = () => {
             </div>
           ))
         ) : (
-          <div className="text-center text-gray-500 py-25">ไม่พบข้อมูลหน้าแรก</div>
+          <div className="text-center text-gray-500 py-24">ไม่พบข้อมูลหน้าแรก</div>
         )}
       </div>
     </div>

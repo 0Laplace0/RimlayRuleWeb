@@ -12,13 +12,21 @@ exports.getBanners = async (req, res) => {
   }
 };
 
-// สร้าง Banner ใหม่
+// สร้าง Banner ใหม่ (รองรับทั้ง banner และ background)
 exports.createBanner = async (req, res) => {
   try {
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : '';
-    const newBanner = await prisma.banner.create({
-      data: { imageUrl }
-    });
+    const bannerFile = req.files?.banner?.[0];
+    const bgFile = req.files?.background?.[0];
+
+    const data = {};
+    if (bannerFile) {
+      data.imageUrl = `/uploads/${bannerFile.filename}`;
+    }
+    if (bgFile) {
+      data.backgroundUrl = `/uploads/${bgFile.filename}`; // ใช้ชื่อฟิลด์ backgroundUrl ใน DB
+    }
+
+    const newBanner = await prisma.banner.create({ data });
     res.status(201).json({ message: 'Created banner successfully', data: newBanner });
   } catch (error) {
     res.status(500).json({ message: 'Error creating banner', error: error.message });
@@ -37,10 +45,20 @@ exports.updateBanner = async (req, res) => {
       return res.status(404).json({ message: 'Banner not found' });
     }
 
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : existing.imageUrl;
+    const bannerFile = req.files?.banner?.[0];
+    const bgFile = req.files?.background?.[0];
+
+    const updateData = {};
+    if (bannerFile) {
+      updateData.imageUrl = `/uploads/${bannerFile.filename}`;
+    }
+    if (bgFile) {
+      updateData.backgroundUrl = `/uploads/${bgFile.filename}`;
+    }
+
     const updatedBanner = await prisma.banner.update({
       where: { id: Number(id) },
-      data: { imageUrl }
+      data: updateData
     });
 
     res.json({ message: 'Updated banner successfully', data: updatedBanner });

@@ -143,11 +143,11 @@ export default function UnifiedRules({
   // --- แสดงผลข้อความธรรมดา ---
   const renderValue = (val, isJailColumn = false) => {
     if (val === null || val === undefined || val === '') {
-      return <span className="text-gray-400">-</span>;
+      return <span className="text-gray-500">-</span>;
     }
 
     const str = String(val).trim();
-    if (!str) return <span className="text-gray-400">-</span>;
+    if (!str) return <span className="text-gray-500">-</span>;
 
     if (isJailColumn && !isNaN(str)) {
       return `${str} นาที`;
@@ -187,11 +187,9 @@ export default function UnifiedRules({
     const typeStr = String(selectedCategory.type || '').toLowerCase();
     const titleStr = selectedCategory.title || '';
 
-    // เช็กจากประเภทหรือชื่อหมวดหมู่
     if (['police', 'law', 'cop'].includes(typeStr)) return true;
     if (titleStr.includes('ตำรวจ') || titleStr.includes('สน.') || titleStr.toLowerCase().includes('police')) return true;
 
-    // หรือเช็กว่ามีรายการกฎข้อไหนที่มีค่าเวลาจำคุกอยู่หรือไม่
     const hasJailInRules = (rules) => rules?.some((r) => extractJailVal(r) !== null);
 
     if (selectedCategory.subGroups && selectedCategory.subGroups.length > 0) {
@@ -201,22 +199,21 @@ export default function UnifiedRules({
     return hasJailInRules(selectedCategory.rules || selectedCategory.items);
   })();
 
-  // 🌟 เรนเดอร์ตาราง (ปรับคอลัมน์ตามหมวดหมู่)
+  // 🌟 เรนเดอร์ตาราง (Dark Mode / Cyan Style)
   const renderTableData = (ruleList) => {
     if (!ruleList || ruleList.length === 0) return null;
 
     return (
-      <div className="overflow-x-auto border border-gray-200 rounded-xl bg-white shadow-sm">
+      <div className="overflow-x-auto border border-[#80deea]/30 rounded-xl bg-[#111a1f]/90 shadow-sm">
         <table className="min-w-full border-collapse text-left text-sm">
-          <thead className="bg-gray-100 border-b border-gray-200 text-gray-700">
+          <thead className="bg-[#80deea]/15 border-b border-[#80deea]/30 text-[#80deea]">
             <tr>
-              <th className={`px-6 py-3.5 text-xs font-bold uppercase tracking-wider border-r border-gray-200 ${isPoliceCategory ? 'w-1/2' : 'w-2/3'}`}>
+              <th className={`px-6 py-3.5 text-xs font-bold uppercase tracking-wider border-r border-[#80deea]/20 ${isPoliceCategory ? 'w-1/2' : 'w-2/3'}`}>
                 รายการ
               </th>
-              <th className={`px-6 py-3.5 text-xs font-bold uppercase tracking-wider ${isPoliceCategory ? 'border-r border-gray-200 w-1/4' : 'w-1/3'}`}>
+              <th className={`px-6 py-3.5 text-xs font-bold uppercase tracking-wider ${isPoliceCategory ? 'border-r border-[#80deea]/20 w-1/4' : 'w-1/3'}`}>
                 {isPoliceCategory ? 'ค่าปรับ' : 'ค่ารักษา / ค่าบริการ'}
               </th>
-              {/* 🌟 แสดงคอลัมน์จำคุกเฉพาะฝั่งตำรวจเท่านั้น */}
               {isPoliceCategory && (
                 <th className="px-6 py-3.5 text-xs font-bold uppercase tracking-wider w-1/4">
                   จำคุก / นาที
@@ -224,23 +221,22 @@ export default function UnifiedRules({
               )}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-[#80deea]/20">
             {ruleList.map((rule, rIdx) => {
               const textContent = typeof rule === 'object' && !rule.textDelta ? (rule.text || rule.description || rule.title || '') : rule;
               const moneyVal = extractMoneyVal(rule);
               const jailVal = extractJailVal(rule);
 
               return (
-                <tr key={rIdx} className="hover:bg-gray-50 transition">
-                  <td className="px-6 py-4 font-medium text-gray-900 align-top border-r border-gray-200 whitespace-pre-wrap">
+                <tr key={rIdx} className="hover:bg-[#80deea]/10 transition">
+                  <td className="px-6 py-4 font-medium text-white align-top border-r border-[#80deea]/20 whitespace-pre-wrap">
                     {renderFormattedContent(textContent)}
                   </td>
-                  <td className={`px-6 py-4 align-top font-normal text-gray-800 ${isPoliceCategory ? 'border-r border-gray-200' : ''}`}>
+                  <td className={`px-6 py-4 align-top font-normal text-gray-300 ${isPoliceCategory ? 'border-r border-[#80deea]/20' : ''}`}>
                     {renderValue(moneyVal, false)}
                   </td>
-                  {/* 🌟 แสดงข้อมูลจำคุกเฉพาะฝั่งตำรวจเท่านั้น */}
                   {isPoliceCategory && (
-                    <td className="px-6 py-4 align-top font-normal text-gray-800">
+                    <td className="px-6 py-4 align-top font-normal text-gray-300">
                       {renderValue(jailVal, true)}
                     </td>
                   )}
@@ -259,40 +255,40 @@ export default function UnifiedRules({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16 text-gray-800 flex flex-col w-full relative">
+    <div className="min-h-screen bg-transparent text-white flex flex-col w-full relative overflow-x-hidden">
       <Navbar />
-      <Banner />
+      <Banner manageGlobalBackground={true} />
 
       <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 flex flex-col items-center">
-        {loading && <div className="text-center py-10 text-gray-500">กำลังโหลดข้อมูล...</div>}
-        {error && <div className="text-center py-10 text-red-500">เกิดข้อผิดพลาด: {error}</div>}
+        {loading && <div className="text-center py-10 text-gray-400">กำลังโหลดข้อมูล...</div>}
+        {error && <div className="text-center py-10 text-red-400">เกิดข้อผิดพลาด: {error}</div>}
 
         {!loading && !error && (
           <div className="w-full space-y-6 animate-fadeIn">
             {selectedCategory && (
               <>
                 {/* หัวข้อหลักประจำหน้า */}
-                <div className="text-center pb-6 border-b border-gray-200 mb-8">
-                  <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                <div className="text-center pb-6 border-b border-[#80deea]/30 mb-8">
+                  <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
                     {selectedCategory.title || defaultPageTitle}
                   </h1>
                 </div>
 
                 {/* =================== 1. ฝั่ง กฎทั่วไป =================== */}
                 {!isTableCategory ? (
-                  <div className="bg-white p-6 sm:p-8 rounded-2xl border border-gray-200 shadow-sm space-y-8">
+                  <div className="bg-[#111a1f]/80 p-6 sm:p-8 rounded-2xl border border-[#80deea]/30 shadow-sm space-y-8 text-white">
                     {selectedCategory.items && selectedCategory.items.length > 0 && (
-                      <ul className="space-y-3 list-disc pl-5 text-gray-700 text-sm sm:text-base leading-relaxed">
+                      <ul className="space-y-3 list-disc pl-5 text-gray-300 text-sm sm:text-base leading-relaxed">
                         {selectedCategory.items.map((item, index) => {
                           const subItems = item.subItems || item.items || [];
                           const textContent = typeof item === 'object' && !item.textDelta ? (item.text || item.description || '') : item;
                           return (
                             <li key={index} className="space-y-2">
-                              <div className="font-medium text-gray-900 whitespace-pre-wrap">
+                              <div className="font-medium text-white whitespace-pre-wrap">
                                 {renderFormattedContent(textContent)}
                               </div>
                               {subItems.length > 0 && (
-                                <ul className="space-y-1.5 list-[circle] pl-5 mt-2 text-gray-600 text-sm">
+                                <ul className="space-y-1.5 list-[circle] pl-5 mt-2 text-gray-400 text-sm">
                                   {subItems.map((subItem, sIdx) => {
                                     const subText = typeof subItem === 'object' && !subItem.textDelta ? (subItem.text || subItem.description || '') : subItem;
                                     return (
@@ -317,22 +313,22 @@ export default function UnifiedRules({
                           return (
                             <div key={sub.id || sub.subId || sIdx} className="space-y-3">
                               {subTitleText && (
-                                <h3 className="text-base sm:text-lg font-bold text-slate-900 border-l-4 border-slate-900 pl-3">
+                                <h3 className="text-base sm:text-lg font-bold text-white border-l-4 border-[#80deea] pl-3">
                                   {subTitleText}
                                 </h3>
                               )}
                               {subItemsList.length > 0 && (
-                                <ul className="space-y-2 list-disc pl-5 text-gray-700 text-sm sm:text-base leading-relaxed">
+                                <ul className="space-y-2 list-disc pl-5 text-gray-300 text-sm sm:text-base leading-relaxed">
                                   {subItemsList.map((subItem, rIdx) => {
                                     const nestedSubItems = subItem.subItems || subItem.items || [];
                                     const textContent = typeof subItem === 'object' && !subItem.textDelta ? (subItem.text || subItem.description || '') : subItem;
                                     return (
                                       <li key={rIdx} className="space-y-1">
-                                        <div className="whitespace-pre-wrap">
+                                        <div className="whitespace-pre-wrap text-white">
                                           {renderFormattedContent(textContent)}
                                         </div>
                                         {nestedSubItems.length > 0 && (
-                                          <ul className="space-y-1 list-[circle] pl-5 mt-1 text-gray-600 text-sm">
+                                          <ul className="space-y-1 list-[circle] pl-5 mt-1 text-gray-400 text-sm">
                                             {nestedSubItems.map((nested, nIdx) => (
                                               <li key={nIdx} className="whitespace-pre-wrap">
                                                 {renderFormattedContent(nested)}
@@ -352,18 +348,18 @@ export default function UnifiedRules({
                     )}
 
                     {selectedCategory.images && selectedCategory.images.length > 0 && (
-                      <div className="space-y-4 pt-6 border-t border-gray-100">
-                        <h3 className="text-base font-semibold text-gray-800">รูปภาพประกอบ</h3>
+                      <div className="space-y-4 pt-6 border-t border-[#80deea]/20">
+                        <h3 className="text-base font-semibold text-[#80deea]">รูปภาพประกอบ</h3>
                         <div className="flex flex-col gap-6">
                           {selectedCategory.images.map((img, imgIdx) => (
                             <div key={imgIdx} className="space-y-2 text-center">
                               <img
                                 src={getImageUrl(img.imageUrl)}
                                 alt={img.caption || 'rule-img'}
-                                className="w-1/2 mx-auto h-auto rounded-lg object-cover"
+                                className="w-1/2 mx-auto h-auto rounded-lg object-cover border border-[#80deea]/30"
                               />
                               {img.caption && (
-                                <p className="text-xs text-gray-600 font-medium text-center">
+                                <p className="text-xs text-gray-400 font-medium text-center">
                                   * {img.caption}
                                 </p>
                               )}
@@ -381,9 +377,9 @@ export default function UnifiedRules({
                         const ruleList = sub.rules || sub.items || [];
                         const subTitleText = sub.subTitle || sub.sub_title || sub.name;
                         return (
-                          <div key={sub.id || sub.subId || sIdx} className="space-y-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                          <div key={sub.id || sub.subId || sIdx} className="space-y-4 bg-[#111a1f]/80 p-6 rounded-2xl border border-[#80deea]/30 shadow-sm">
                             {subTitleText && (
-                              <h3 className="text-base sm:text-lg font-bold text-slate-900 border-l-4 border-slate-900 pl-3">
+                              <h3 className="text-base sm:text-lg font-bold text-white border-l-4 border-[#80deea] pl-3">
                                 {subTitleText}
                               </h3>
                             )}
@@ -392,7 +388,7 @@ export default function UnifiedRules({
                         );
                       })
                     ) : (
-                      <div className="space-y-3 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                      <div className="space-y-3 bg-[#111a1f]/80 p-6 rounded-2xl border border-[#80deea]/30 shadow-sm">
                         {renderTableData(selectedCategory.rules || selectedCategory.items || [])}
                       </div>
                     )}
@@ -401,8 +397,8 @@ export default function UnifiedRules({
 
                 {/* หมายเหตุท้ายหน้า */}
                 {(selectedCategory.footerNote || selectedCategory.footer_note) && (
-                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-sm">
-                    <span className="font-semibold">หมายเหตุ: </span>{' '}
+                  <div className="p-4 bg-[#80deea]/10 border border-[#80deea]/40 rounded-xl text-[#80deea] text-sm">
+                    <span className="font-semibold text-white">หมายเหตุ: </span>{' '}
                     {selectedCategory.footerNote || selectedCategory.footer_note}
                   </div>
                 )}

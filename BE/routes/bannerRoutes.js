@@ -10,17 +10,24 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, 'banner-' + uniqueSuffix + path.extname(file.originalname));
+    // เปลี่ยนจาก 'banner-' เป็น ${file.fieldname}- เพื่อแยกระหว่าง banner และ background
+    cb(null, `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`);
   }
 });
 
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // จำกัดขนาดไฟล์ไม่เกิน 5MB
+  limits: { fileSize: 5 * 1024 * 1024 } // จำกัดขนาดไฟล์ไม่เกิน 5MB ต่อไฟล์
 });
 
+// กำหนด fields ให้รองรับทั้ง 'banner' และ 'background'
+const bannerUploadFields = upload.fields([
+  { name: 'banner', maxCount: 1 },
+  { name: 'background', maxCount: 1 }
+]);
+
 router.get('/', bannerController.getBanners);
-router.post('/', upload.single('banner'), bannerController.createBanner);
-router.put('/:id', upload.single('banner'), bannerController.updateBanner);
+router.post('/', bannerUploadFields, bannerController.createBanner);
+router.put('/:id', bannerUploadFields, bannerController.updateBanner);
 
 module.exports = router;

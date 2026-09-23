@@ -116,7 +116,7 @@ const BannerCRUD = () => {
       <div className="bg-[#1e293b]/20 p-6 rounded-2xl border border-indigo-950/60 shadow-xl space-y-6">
         
         <div className="bg-[#1e293b] border border-indigo-950/60 py-3 px-6 rounded-lg shadow-md flex justify-between items-center">
-          <h2 className="text-lg font-bold text-white">จัดการรูปภาพ Banner และพื้นหลังเว็บ</h2>
+          <h2 className="text-lg font-bold text-white">จัดการรูปภาพ Banner และ Background</h2>
         </div>
 
         {loading ? (

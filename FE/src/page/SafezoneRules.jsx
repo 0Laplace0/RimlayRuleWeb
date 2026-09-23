@@ -23,7 +23,7 @@ export default function Safezone() {
     }
   };
 
-  if (loading) return <div className="text-center py-20 text-gray-600">กำลังโหลดข้อมูล...</div>;
+  if (loading) return <div className="text-center py-20 text-gray-300">กำลังโหลดข้อมูล...</div>;
 
   // ดึงรายละเอียดและบทลงโทษจากข้อมูลแถวแรกมาแสดงที่ Header ด้านบน
   const mainInfo = safezones[0] || {};
@@ -36,24 +36,25 @@ export default function Safezone() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-transparent text-white flex flex-col w-full relative overflow-x-hidden">
       <Navbar />
-      <Banner />
+      <Banner manageGlobalBackground={true} />
+
       <div className="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
         
-        {/* Header: หัวข้อกลาง รายละเอียดและบทลงโทษชิดซ้าย */}
-        <div className="pb-8 border-b border-gray-200 mb-10">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 tracking-tight mb-6 text-center">
+        {/* Header */}
+        <div className="pb-8 border-b border-gray-200/20 mb-10">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-6 text-center">
             Safezone
           </h1>
           <div className="max-w-3xl mx-auto space-y-2 text-left">
             {mainInfo.description && (
-              <p className="text-gray-700 text-base sm:text-lg leading-relaxed whitespace-pre-line">
+              <p className="text-gray-300 text-base sm:text-lg leading-relaxed whitespace-pre-line">
                 {mainInfo.description}
               </p>
             )}
             {mainInfo.penalty && (
-              <p className="text-gray-900 font-semibold text-base">
+              <p className="text-amber-300 font-semibold text-base">
                 บทลงโทษ : {mainInfo.penalty}
               </p>
             )}
@@ -68,7 +69,7 @@ export default function Safezone() {
 
             return item.images.map((img) => (
               <div key={img.id} className="flex flex-col items-center p-4">
-                <div className="w-full h-64 sm:h-72 overflow-hidden rounded-lg mb-4 bg-gray-50 shadow-sm">
+                <div className="w-full h-64 sm:h-72 overflow-hidden rounded-lg mb-4 bg-gray-50/10 shadow-sm">
                   <img 
                     src={getImageUrl(img.imageUrl)} 
                     alt={img.caption || item.title} 
@@ -76,7 +77,7 @@ export default function Safezone() {
                   />
                 </div>
                 {/* แสดงชื่อภาพจาก caption หรือ title หลัก */}
-                <h3 className="text-lg font-bold text-gray-800 tracking-wide text-center">
+                <h3 className="text-lg font-bold text-white tracking-wide text-center">
                   {img.caption || item.title}
                 </h3>
               </div>

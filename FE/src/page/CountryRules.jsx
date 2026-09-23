@@ -106,9 +106,9 @@ const CountryRules = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0d11] text-white flex flex-col w-full relative">
+    <div className="min-h-screen bg-transparent text-white flex flex-col w-full relative overflow-x-hidden">
       <Navbar />
-      <Banner />
+      <Banner manageGlobalBackground={true} />
 
       <div className="flex-1 w-full max-w-5xl mx-auto px-4 py-8 flex flex-col items-center">
         {loading && <p className="text-[#80deea] animate-pulse mt-10">กำลังโหลดข้อมูลกฎระเบียบประเทศ...</p>}
